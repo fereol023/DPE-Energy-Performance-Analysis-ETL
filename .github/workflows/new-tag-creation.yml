@@ -107,12 +107,14 @@ jobs:
         fetch-depth: 0
           
     - name: Build the Docker image
-    - id: build-docker-image
+      id: build-docker-image
       run: |
         DOCKER_IMAGE_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2) # image name is repo name
         LATEST_TAG=$(git describe --tags --abbrev=0)
         DOCKER_IMAGE_TAG="${REPO_NAME}-${LATEST_TAG}-$(date +%s)"
         echo "docker image tag name : ${DOCKER_IMAGE_TAG_NAME}"
         docker build . --file Dockerfile --tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
-        echo "DOCKER_IMAGE_BUILDED=${DOCKER_IMAGE_BUILDED}" >> "$GITHUB_OUTPUT"
-        echo "DOCKER_IMAGE_BUILDED"
+        echo "docker_image_builded=${DOCKER_IMAGE_BUILDED}" >> "$GITHUB_OUTPUT"
+
+    - name: push image
+      run: echo "${{ steps.build-docker-image.outputs.docker_image_builded }}" 
