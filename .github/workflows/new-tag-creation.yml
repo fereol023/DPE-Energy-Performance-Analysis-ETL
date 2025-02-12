@@ -113,6 +113,7 @@ jobs:
       id: build-docker-image
       run: |
         DOCKER_IMAGE_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2) # image name is repo name
+        DOCKER_IMAGE_NAME=$(echo $DOCKER_IMAGE_NAME | tr '[:upper:]' '[:lower:]') # lower name compulsory for docker
         LATEST_TAG=${{ needs.create-tag.outputs.new_tag_created }}
         DOCKER_IMAGE_TAG="${LATEST_TAG}-$(date +%s)"
         echo "docker image tag name : ${DOCKER_IMAGE_TAG_NAME}"
