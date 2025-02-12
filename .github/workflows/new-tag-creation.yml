@@ -74,7 +74,7 @@ jobs:
                 MINOR_VERSION=$(( ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }} ))
                 echo "The new tag ends with ${MINOR_VERSION} and ${TAG_SUFFIX}"
               else
-                TAG_SUFFIX="rc-0"
+                TAG_SUFFIX="rc-0" # if not a rc tag like v0.1 set a new rc tags series and keep th same minor v0.1.rc-2
                 MINOR_VERSION=$(( ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }} ))
               fi
             fi
