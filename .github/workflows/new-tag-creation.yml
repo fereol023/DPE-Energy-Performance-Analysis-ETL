@@ -82,4 +82,4 @@ jobs:
           NEW_TAG="v$MAJOR.$MINOR.${{ steps.check-branch-and-message.outputs.tag_suffix }}"
           echo ${NEW_TAG}
           echo "NEW_TAG=${NEW_TAG}" >> "$GITHUB_OUTPUT"
-          git tag ${NEW_TAG}
+          git push origin ${NEW_TAG}
