@@ -23,7 +23,7 @@ jobs:
           echo "::set-output name=latest_tag::${LATEST_TAG}"
 
       - name: Extract major and minor version
-        id: extract and set minor and major versions
+        id: extract-and-set-minor-and-major-versions
         uses: actions/github-script@v4
         with:
           script: |
