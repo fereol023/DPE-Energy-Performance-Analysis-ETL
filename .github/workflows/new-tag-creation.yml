@@ -34,14 +34,12 @@ jobs:
           
       - name: Extract major and minor version
         id: extract-and-set-minor-and-major-versions
-        uses: actions/github-script@v4
-        with:
-          script: |
-            echo "the latest tag is $LATEST_TAG"
-            major=$(cat .env | grep ^MAJOR | cut -d= -f2)
-            minor=$(cat .env | grep ^MINOR | cut -d= -f2)
-            echo "::set-output name=major::$major"
-            echo "::set-output name=minor::$minor"
+        run: |
+          MAJOR_VERSION=$(echo "$LATEST_TAG"| cut -d'.' -f2)
+          MINOR_VERSION=$(echo "$LATEST_TAG"| cut -d'.' -f3)
+          echo "MAJOR_VERSION=${MAJOR_VERSION}" >> $GITHUB_OUTPUT
+          echo "MINOR_VERSION=${MINOR_VERSION}" >> $GITHUB_OUTPUT
+          echo "the major version is $MAJOR_VERSION and the minor is $MINOR_VERSION"
 
       - name: Check branch name and commit message
         id: check-branch-and-message
