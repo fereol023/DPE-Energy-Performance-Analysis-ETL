@@ -73,6 +73,7 @@ jobs:
           echo "::set-output name=tag_suffix::${TAG_SUFFIX}"
 
       - name: Create tag
+        id: tag-creation
         env:
           MAJOR: ${{ steps.extract-and-set-minor-and-major-versions.outputs.MAJOR_VERSION }}
           MINOR: ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }}
@@ -80,3 +81,5 @@ jobs:
           echo "the major version is $MAJOR and the minor is $MINOR"
           NEW_TAG="v$MAJOR.$MINOR.${{ steps.check-branch-and-message.outputs.tag_suffix }}"
           echo ${NEW_TAG}
+          echo "NEW_TAG=${NEW_TAG}" >> "$GITHUB_OUTPUT"
+          git tag ${NEW_TAG}
