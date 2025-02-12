@@ -23,12 +23,14 @@ jobs:
           echo "::set-output name=latest_tag::${LATEST_TAG}"
 
       - name: Extract major and minor version
-        id: extract-version
-        run: |
-          MAJOR=$(echo ${{ steps.extract-latest-tag.outputs.latest_tag }} | cut -d. -f1)
-          MINOR=$(echo ${{ steps.extract-latest-tag.outputs.latest_tag }} | cut -d. -f2)
-          echo "::set-env name=MAJOR::${MAJOR}"
-          echo "::set-env name=MINOR::${MINOR}"
+        id: extract and set minor and major versions
+        uses: actions/github-script@v4
+        with:
+          script: |
+            major=$(cat .env | grep ^MAJOR | cut -d= -f2)
+            minor=$(cat .env | grep ^MINOR | cut -d= -f2)
+            echo "::set-output name=major::$major"
+            echo "::set-output name=minor::$minor"
 
       - name: Check branch name and commit message
         id: check-branch-and-message
