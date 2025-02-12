@@ -45,13 +45,13 @@ jobs:
       - name: Extract major and minor version from latest tag
         id: extract-and-set-minor-and-major-versions
         run: |
-          MAJOR_VERSION=$(echo "$LATEST_TAG"| cut -d'.' -f2)
-          MINOR_VERSION=$(echo "$LATEST_TAG"| cut -d'.' -f3)
+          MAJOR_VERSION=$(echo "$LATEST_TAG"| cut -d'.' -f1)
+          MINOR_VERSION=$(echo "$LATEST_TAG"| cut -d'.' -f2)
           echo "MAJOR_VERSION=${MAJOR_VERSION}" >> $GITHUB_OUTPUT
           echo "MINOR_VERSION=${MINOR_VERSION}" >> $GITHUB_OUTPUT
           echo "MAJOR_VERSION=${MAJOR_VERSION}"
           echo "MINOR_VERSION=${MINOR_VERSION}"
-          echo "$LATEST_TAG"| cut -d'.'
+          echo "$LATEST_TAG"|cut -d'.'
           
       - name: Check branch name and commit message
         id: check-branch-and-message
