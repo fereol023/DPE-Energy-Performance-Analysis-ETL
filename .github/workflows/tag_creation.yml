@@ -1,4 +1,4 @@
-name: Create tag and trigger pipeline
+name: Create tag 
 
 on:
   push:
