@@ -26,8 +26,8 @@ jobs:
           echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_OUTPUT
           ls
           echo "the latest tag is $LATEST_TAG"
-          MAJOR_VERSION = $(echo "$LATEST_TAG"| cut -d'.' -f2)
-          MINOR_VERSION = $(echo "$LATEST_TAG"| cut -d'.' -f3)
+          MAJOR_VERSION=$(echo "$LATEST_TAG"| cut -d'.' -f2)
+          MINOR_VERSION=$(echo "$LATEST_TAG"| cut -d'.' -f3)
           echo "MAJOR_VERSION=${MAJOR_VERSION}" >> $GITHUB_OUTPUT
           echo "MINOR_VERSION=${MINOR_VERSION}" >> $GITHUB_OUTPUT
 
