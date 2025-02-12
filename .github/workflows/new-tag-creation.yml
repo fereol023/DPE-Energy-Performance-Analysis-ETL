@@ -103,8 +103,11 @@ jobs:
     steps:
     
     - uses: actions/checkout@v4
-    - id: build-docker-image
+        with:
+          fetch-depth: 0
+          
     - name: Build the Docker image
+    - id: build-docker-image
       run: |
         DOCKER_IMAGE_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2) # image name is repo name
         LATEST_TAG=$(git describe --tags --abbrev=0)
