@@ -82,7 +82,7 @@ jobs:
           MINOR: ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }}
         run: |
           echo "the major version is $MAJOR and the minor is $MINOR"
-          NEW_TAG="v$MAJOR.$MINOR.${{ steps.check-branch-and-message.outputs.tag_suffix }}"
+          NEW_TAG="$MAJOR.$MINOR.${{ steps.check-branch-and-message.outputs.tag_suffix }}"
           echo ${NEW_TAG}
           echo "NEW_TAG=${NEW_TAG}" >> "$GITHUB_OUTPUT"
           git tag ${NEW_TAG}
