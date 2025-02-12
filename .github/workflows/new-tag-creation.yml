@@ -42,20 +42,13 @@ jobs:
           SELECTED_COLOR: ${{ steps.color-selector.outputs.SELECTED_COLOR }}
         run: echo "The selected color is $SELECTED_COLOR"
           
-      - name: Extract major and minor version
+      - name: Extract major and minor version from latest tag
         id: extract-and-set-minor-and-major-versions
         run: |
           MAJOR_VERSION=$(echo "$LATEST_TAG"| cut -d'.' -f2)
           MINOR_VERSION=$(echo "$LATEST_TAG"| cut -d'.' -f3)
           echo "MAJOR_VERSION=${MAJOR_VERSION}" >> $GITHUB_OUTPUT
           echo "MINOR_VERSION=${MINOR_VERSION}" >> $GITHUB_OUTPUT
-
-      - name: Read major and minor version
-        id: read-maj-min-version
-        env:
-          MAJOR: ${{ steps.extract-and-set-minor-and-major-versions.outputs.MAJOR_VERSION }}
-          MINOR: ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }}
-        run: echo "the major version is ${MAJOR} and the minor is ${MINOR}"
 
       - name: Check branch name and commit message
         id: check-branch-and-message
@@ -80,7 +73,10 @@ jobs:
           echo "::set-output name=tag_suffix::${TAG_SUFFIX}"
 
       - name: Create tag
+        env:
+          MAJOR: ${{ steps.extract-and-set-minor-and-major-versions.outputs.MAJOR_VERSION }}
+          MINOR: ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }}
         run: |
-          echo "the major version is $MAJOR_VERSION and the minor is $MINOR_VERSION"
-          NEW_TAG="v$MAJOR_VERSION.$MINOR_VERSION.${{ steps.check-branch-and-message.outputs.tag_suffix }}"
+          echo "the major version is $MAJOR and the minor is $MINOR"
+          NEW_TAG="v$MAJOR.$MINOR.${{ steps.check-branch-and-message.outputs.tag_suffix }}"
           echo ${NEW_TAG}
