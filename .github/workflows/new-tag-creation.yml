@@ -20,9 +20,11 @@ jobs:
         id: extract-latest-tag
         run: |
           LATEST_TAG=$(git describe --tags --abbrev=0)
+          echo "$LATEST_TAG"
+          echo "LATEST_TAG=$LATEST_TAG"
+          echo "LATEST_TAG=${LATEST_TAG}"
           echo "LATEST_TAG={LATEST_TAG}" >> $GITHUB_OUTPUT
-          echo "LATEST_TAG={LATEST_TAG}"
-          
+
       - name: Extract major and minor version
         id: extract-and-set-minor-and-major-versions
         uses: actions/github-script@v4
