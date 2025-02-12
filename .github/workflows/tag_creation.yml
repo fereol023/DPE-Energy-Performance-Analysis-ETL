@@ -1,0 +1,55 @@
+name: Create tag and trigger pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  create-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Extract latest tag
+        id: extract-latest-tag
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          echo "::set-output name=latest_tag::${LATEST_TAG}"
+
+      - name: Extract major and minor version
+        id: extract-version
+        run: |
+          MAJOR=$(echo ${{ steps.extract-latest-tag.outputs.latest_tag }} | cut -d. -f1)
+          MINOR=$(echo ${{ steps.extract-latest-tag.outputs.latest_tag }} | cut -d. -f2)
+          echo "::set-env name=MAJOR::${MAJOR}"
+          echo "::set-env name=MINOR::${MINOR}"
+
+      - name: Check branch name and commit message
+        id: check-branch-and-message
+        run: |
+          BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
+          COMMIT_MESSAGE=$(git log -1 --format=%B)
+          if [[ ${BRANCH_NAME} == main ]]; then
+            if echo "${COMMIT_MESSAGE}" | grep -q 'final'; then
+              TAG_SUFFIX=""
+            else
+              LAST_RC_TAG=$(git describe --tags --match '*rc-*' --abbrev=0)
+              if [[ ${LAST_RC_TAG} ]]; then
+                RC_NUM=$(echo ${LAST_RC_TAG##*-rc-} | awk '{print $1+1}')
+                TAG_SUFFIX="rc-${RC_NUM}"
+              else
+                TAG_SUFFIX="rc-0"
+              fi
+            fi
+          else
+            TAG_SUFFIX="rc-${GITHUB_RUN_ID:0:3}"
+          fi
+          echo "::set-output name=tag_suffix::${TAG_SUFFIX}"
+
+      - name: Create tag
+        run: git tag v${MAJOR}.${MINOR}${{ steps.check-branch-and-message.outputs.tag_suffix }}
