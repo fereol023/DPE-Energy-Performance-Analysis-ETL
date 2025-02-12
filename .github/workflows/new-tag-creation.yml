@@ -23,7 +23,7 @@ jobs:
           echo "$LATEST_TAG"
           echo "LATEST_TAG=$LATEST_TAG"
           echo "LATEST_TAG=${LATEST_TAG}"
-          echo "LATEST_TAG={LATEST_TAG}" >> $GITHUB_OUTPUT
+          echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_OUTPUT
 
       - name: Extract major and minor version
         id: extract-and-set-minor-and-major-versions
