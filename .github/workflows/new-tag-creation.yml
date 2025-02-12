@@ -115,6 +115,4 @@ jobs:
         echo "docker image tag name : ${DOCKER_IMAGE_TAG_NAME}"
         docker build . --file Dockerfile --tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
         echo "DOCKER_IMAGE_BUILDED=${DOCKER_IMAGE_BUILDED}" >> "$GITHUB_OUTPUT"
-
-    - name: Push the Docker image
-      run: echo "${{ steps.build-docker-image.outputs.DOCKER_IMAGE_BUILDED }}"
+        echo "DOCKER_IMAGE_BUILDED"
