@@ -65,8 +65,10 @@ jobs:
             else
               LAST_RC_TAG=$(git describe --tags --match '*rc-*' --abbrev=0)
               if [[ ${LAST_RC_TAG} ]]; then
-                RC_NUM=$(echo ${LAST_RC_TAG##*-rc-} | awk '{print $1+1}')
-                echo "RC NUM incremented is $RC_NUM"
+                RC_NUM=$(echo ${LAST_RC_TAG##*-rc-} | cut -d'-' -f1)  # Extract the current RC number
+                echo "Current RC Number: $RC_NUM"  # Echo the current RC number
+                RC_NUM=$((RC_NUM + 1))  # Increment the RC number by 1
+                echo "Incremented RC Number: $RC_NUM"  # Echo the incremented RC number
                 TAG_SUFFIX="rc-${RC_NUM}"
                 MINOR_VERSION=$(( ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }} ))
                 echo "The new tag ends with ${MINOR_VERSION} and ${TAG_SUFFIX}"
