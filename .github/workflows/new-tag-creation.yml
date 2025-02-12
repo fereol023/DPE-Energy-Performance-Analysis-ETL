@@ -23,14 +23,24 @@ jobs:
           echo "$LATEST_TAG"
           echo "LATEST_TAG=$LATEST_TAG"
           echo "LATEST_TAG=${LATEST_TAG}"
-          echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_OUTPUT
+          echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_ENV
           ls
           echo "the latest tag is $LATEST_TAG"
-          MAJOR_VERSION=$(echo "$LATEST_TAG"| cut -d'.' -f2)
-          MINOR_VERSION=$(echo "$LATEST_TAG"| cut -d'.' -f3)
-          echo "MAJOR_VERSION=${MAJOR_VERSION}" >> $GITHUB_OUTPUT
-          echo "MINOR_VERSION=${MINOR_VERSION}" >> $GITHUB_OUTPUT
-          echo "the major version is $MAJOR_VERSION and the minor is $MINOR_VERSION"
+
+      - name: Tuto Set environment variable
+        run: echo "MY_ENV_VAR=myValue" >> $GITHUB_ENV
+
+      - name: Tuto Use environment variable
+        run: echo "The value of MY_ENV_VAR is $MY_ENV_VAR"
+
+      - name: Tuto Set color 
+        id: color-selector
+        run: echo "SELECTED_COLOR=green" >> "$GITHUB_OUTPUT"
+        
+      - name: Tuto Get color
+        env:
+          SELECTED_COLOR: ${{ steps.color-selector.outputs.SELECTED_COLOR }}
+        run: echo "The selected color is $SELECTED_COLOR"
           
       - name: Extract major and minor version
         id: extract-and-set-minor-and-major-versions
@@ -39,7 +49,13 @@ jobs:
           MINOR_VERSION=$(echo "$LATEST_TAG"| cut -d'.' -f3)
           echo "MAJOR_VERSION=${MAJOR_VERSION}" >> $GITHUB_OUTPUT
           echo "MINOR_VERSION=${MINOR_VERSION}" >> $GITHUB_OUTPUT
-          echo "the major version is $MAJOR_VERSION and the minor is $MINOR_VERSION"
+
+      - name: Read major and minor version
+        id: read-maj-min-version
+        env:
+          MAJOR: ${{ steps.extract-and-set-minor-and-major-versions.outputs.MAJOR_VERSION }}
+          MINOR: ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }}
+        run: echo "the major version is ${MAJOR} and the minor is ${MINOR}"
 
       - name: Check branch name and commit message
         id: check-branch-and-message
