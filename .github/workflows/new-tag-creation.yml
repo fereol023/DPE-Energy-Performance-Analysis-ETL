@@ -18,7 +18,7 @@ jobs:
       - name: Extract latest tag
         id: extract-latest-tag
         run: |
-          git fetch --tag --always
+          git fetch --tags --always
           LATEST_TAG=$(git describe --tags --abbrev=0)
           echo "::set-output name=latest_tag::${LATEST_TAG}"
 
