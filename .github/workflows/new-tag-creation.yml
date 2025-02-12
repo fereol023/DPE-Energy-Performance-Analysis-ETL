@@ -1,15 +1,12 @@
-name: Create tag 
+name: Docker CI 
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
 
 jobs:
-  create-tag:
+  create-new-tag:
     runs-on: ubuntu-latest
     outputs:
         new_tag_created: ${{ steps.tag-creation.outputs.NEW_TAG }}
@@ -102,7 +99,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    needs: create-tag
+    needs: create-new-tag
     steps:
     
     - uses: actions/checkout@v3
@@ -114,7 +111,7 @@ jobs:
       run: |
         DOCKER_IMAGE_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2) # image name is repo name
         DOCKER_IMAGE_NAME=$(echo $DOCKER_IMAGE_NAME | tr '[:upper:]' '[:lower:]') # lower name compulsory for docker
-        LATEST_TAG=${{ needs.create-tag.outputs.new_tag_created }}
+        LATEST_TAG=${{ needs.create-new-tag.outputs.new_tag_created }}
         DOCKER_IMAGE_TAG="${LATEST_TAG}-$(date +%s)"
         echo "docker image tag name : ${DOCKER_IMAGE_TAG_NAME}"
         docker build . --file Dockerfile --tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
