@@ -64,4 +64,4 @@ jobs:
           echo "::set-output name=tag_suffix::${TAG_SUFFIX}"
 
       - name: Create tag
-        run: git tag v${MAJOR}.${MINOR}${{ steps.check-branch-and-message.outputs.tag_suffix }}
+        run: git tag v${MAJOR_VERSION}.${MINOR_VERSION}${{ steps.check-branch-and-message.outputs.tag_suffix }}
