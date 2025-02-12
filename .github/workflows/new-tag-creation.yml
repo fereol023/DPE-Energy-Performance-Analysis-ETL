@@ -30,7 +30,8 @@ jobs:
           MINOR_VERSION=$(echo "$LATEST_TAG"| cut -d'.' -f3)
           echo "MAJOR_VERSION=${MAJOR_VERSION}" >> $GITHUB_OUTPUT
           echo "MINOR_VERSION=${MINOR_VERSION}" >> $GITHUB_OUTPUT
-
+          echo "the major version is $MAJOR_VERSION and the minor is $MINOR_VERSION"
+          
       - name: Extract major and minor version
         id: extract-and-set-minor-and-major-versions
         uses: actions/github-script@v4
