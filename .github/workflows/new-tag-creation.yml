@@ -97,8 +97,21 @@ jobs:
           echo "NEW_TAG=${NEW_TAG}" >> "$GITHUB_OUTPUT"
           git tag ${NEW_TAG}
           git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git ${NEW_TAG}
-          
-          REPO_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2)
-          LATEST_TAG=$(git describe --tags --abbrev=0)
-          TAG_NAME="${REPO_NAME}-${LATEST_TAG}-$(date +%s)"
-          echo "${TAG_NAME}"
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    
+    - uses: actions/checkout@v4
+    - id: build-docker-image
+    - name: Build the Docker image
+      run: |
+        DOCKER_IMAGE_NAME=$(echo $GITHUB_REPOSITORY | cut -d'/' -f2) # image name is repo name
+        LATEST_TAG=$(git describe --tags --abbrev=0)
+        DOCKER_IMAGE_TAG="${REPO_NAME}-${LATEST_TAG}-$(date +%s)"
+        echo "docker image tag name : ${DOCKER_IMAGE_TAG_NAME}"
+        docker build . --file Dockerfile --tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+        echo "DOCKER_IMAGE_BUILDED=${DOCKER_IMAGE_BUILDED}" >> "$GITHUB_OUTPUT"
+
+    - name: Push the Docker image
+      run: echo "${{ steps.build-docker-image.outputs.DOCKER_IMAGE_BUILDED }}"
