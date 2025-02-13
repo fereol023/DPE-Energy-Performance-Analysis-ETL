@@ -124,9 +124,9 @@ jobs:
         IMAGE_FULL_NAME="${{ secrets.CR_USER }}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
         echo "Docker image name: ${IMAGE_FULL_NAME}"
         docker build --file Dockerfile --tag "$IMAGE_FULL_NAME" .
-        echo "docker_image_built=$IMAGE_FULL_NAME" >> "$GITHUB_OUTPUT"
+        echo "docker_image_built=$IMAGE_FULL_NAME" >> "$GITHUB_ENV"
         
     - name: Push Docker image
       run: |
-        echo "${{ steps.build-docker-image.outputs.docker_image_builded }}" 
-        docker push ${{ steps.build-docker-image.outputs.docker_image_builded }}
+        echo "Pushing docker image : $docker_image_built" 
+        docker push "$docker_image_built"
