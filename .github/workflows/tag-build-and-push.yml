@@ -61,7 +61,7 @@ jobs:
             MINOR_VERSION=$(( ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }} + 1 ))
             echo "The new tag ends with ${MINOR_VERSION} and ${TAG_SUFFIX}"
           else
-            LAST_RC_TAG=$(git describe --tags --match '*rc-*' --abbrev=0)
+            LAST_RC_TAG=$(git describe --tags --match '*rc-*' $(git rev-list --tags --max-count=1))
             if [[ ${LAST_RC_TAG} ]]; then
               echo "last rc tag ${LAST_RC_TAG}" # shtg like v0.0.rc-1
               RC_NUM=$(echo ${LAST_RC_TAG}| cut -d'-' -f2)  # Extract the current RC number
