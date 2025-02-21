@@ -18,7 +18,7 @@ jobs:
       - name: Extract latest tag
         id: extract-latest-tag
         run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0)
+          LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
           echo "$LATEST_TAG"
           echo "LATEST_TAG=$LATEST_TAG"
           echo "LATEST_TAG=${LATEST_TAG}"
@@ -56,34 +56,30 @@ jobs:
         run: |
           BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
           COMMIT_MESSAGE=$(git log -1 --format=%B)
-          if [[ ${BRANCH_NAME} == main ]]; then
-            if echo "${COMMIT_MESSAGE}" | grep -q 'final'; then
-              TAG_SUFFIX=""
-              MINOR_VERSION=$(( ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }} + 1 ))
+          if echo "${COMMIT_MESSAGE}" | grep -q 'final'; then
+            TAG_SUFFIX=""
+            MINOR_VERSION=$(( ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }} + 1 ))
+            echo "The new tag ends with ${MINOR_VERSION} and ${TAG_SUFFIX}"
+          else
+            LAST_RC_TAG=$(git describe --tags --match '*rc-*' $(git rev-list --tags --max-count=1))
+            if [[ ${LAST_RC_TAG} ]]; then
+              echo "last rc tag ${LAST_RC_TAG}" # shtg like v0.0.rc-1
+              RC_NUM=$(echo ${LAST_RC_TAG}| cut -d'-' -f2)  # Extract the current RC number
+              echo "Current RC Number: $RC_NUM"  # Echo the current RC number
+              RC_NUM=$((RC_NUM + 1))  # Increment the RC number by 1
+              echo "Incremented RC Number: $RC_NUM"  # Echo the incremented RC number
+              TAG_SUFFIX="rc-${RC_NUM}"
+              MINOR_VERSION=$(( ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }} ))
               echo "The new tag ends with ${MINOR_VERSION} and ${TAG_SUFFIX}"
             else
-              LAST_RC_TAG=$(git describe --tags --match '*rc-*' --abbrev=0)
-              if [[ ${LAST_RC_TAG} ]]; then
-                echo "last rc tag ${LAST_RC_TAG}" # shtg like v0.0.rc-1
-                RC_NUM=$(echo ${LAST_RC_TAG}| cut -d'-' -f2)  # Extract the current RC number
-                echo "Current RC Number: $RC_NUM"  # Echo the current RC number
-                RC_NUM=$((RC_NUM + 1))  # Increment the RC number by 1
-                echo "Incremented RC Number: $RC_NUM"  # Echo the incremented RC number
-                TAG_SUFFIX="rc-${RC_NUM}"
-                MINOR_VERSION=$(( ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }} ))
-                echo "The new tag ends with ${MINOR_VERSION} and ${TAG_SUFFIX}"
-              else
-                TAG_SUFFIX="rc-0" # if not a rc tag like v0.1 set a new rc tags series and keep th same minor v0.1.rc-2
-                MINOR_VERSION=$(( ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }} ))
-              fi
+              TAG_SUFFIX="rc-0" # if not a rc tag like v0.1 set a new rc tags series and keep th same minor v0.1.rc-2
+              MINOR_VERSION=$(( ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }} ))
+              echo "The new tag ends with ${MINOR_VERSION} and ${TAG_SUFFIX}"
             fi
-          else
-            TAG_SUFFIX="rc-${GITHUB_RUN_ID:0:3}"
-            MINOR_VERSION=$(( ${{ steps.extract-and-set-minor-and-major-versions.outputs.MINOR_VERSION }} ))
           fi
           echo "tag_suffix=${TAG_SUFFIX}" >> $GITHUB_OUTPUT
           echo "MINOR_VERSION=${MINOR_VERSION}" >> $GITHUB_OUTPUT
-
+          
       - name: Create tag
         id: tag-creation
         env:
