@@ -2,6 +2,8 @@ import requests, os
 import random
 import time
 
+
+
 print("Hello world !")
 
 API_URL = os.getenv("API_URL", "http://localhost:8000/")
