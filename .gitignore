@@ -1,5 +1,11 @@
-config/
-ressources/
+# particulier
+config/paths.yaml
+config/secrets.json
+
+ressources/*/*/*.parquet
+ressources/*/*.log
+ressources/schemas/*.json
+
 # macOS system files
 */.DS_Store
 */.AppleDouble
