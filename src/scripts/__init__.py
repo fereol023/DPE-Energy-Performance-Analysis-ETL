@@ -1,10 +1,10 @@
 import requests, os, json
 import pandas as pd
-import s3fs # built on top of boto3
+# import s3fs # built on top of boto3
 from minio import Minio
 from pyarrow import Table, parquet as pq
 from io import BytesIO
-import polars as pl
+# import polars as pl
 
 from utils.mylogging import logger, log_decorator
 from utils.fonctions import (

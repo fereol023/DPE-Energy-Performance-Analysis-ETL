@@ -18,7 +18,11 @@ def extract_data():
 @task
 def transform_data(data):
     # call the transform function from your transform module
-    pipeline = transform.TransformDataEnedisAdeme(data, inplace=False)
+    pipeline = transform\
+        .TransformDataEnedisAdeme(
+            data, 
+            inplace=False, 
+            cols_config_fpath=os.getenv('Transform_Step_Cols_Config_Path'))
     pipeline.run()
     return pipeline
 

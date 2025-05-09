@@ -10,6 +10,7 @@ def push_to_api(self, df=None, table_name="", config_api_server={}):
     Envoie le DataFrame à l'endpoint de l'API.
     :param df: Le DataFrame pandas à envoyer.
     """
+    return
     api_endpoint = f"{config_api_server['API_SERVER']}/{table_name}/insert"
     data = df.to_dict(orient='records')
     response = requests.post(api_endpoint, json=data) # must credentials + timeout

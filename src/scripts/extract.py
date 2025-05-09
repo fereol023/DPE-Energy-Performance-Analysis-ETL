@@ -51,7 +51,8 @@ class DataEnedisAdemeExtractor(Connexion):
             else:
                 load_enedis_input_from_s3_csv()
             assert self.input_df.shape[0] > 0, f"Erreur dans le chargement du fichier CSV input : {input_path}"
-            assert all(col in self.input_df.columns for col in ['Adresse', 'Nom Commune', 'Code Commune']), f"Erreur dans le chargement du fichier CSV input : {input_path}"
+            assert all(col in self.input_df.columns for col in ['Adresse', 'Nom Commune', 'Code Commune']),\
+                    f"Erreur dans le chargement du fichier CSV input : {input_path}"
             self.input = self.input.rename(
                             columns={
                                 'Adresse': 'adresse', 
