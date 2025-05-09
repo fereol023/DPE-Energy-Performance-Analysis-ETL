@@ -92,37 +92,4 @@ jobs:
           echo "NEW_TAG=${NEW_TAG}" >> "$GITHUB_OUTPUT"
           git tag ${NEW_TAG}
           git push https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git ${NEW_TAG}
-
-  build:
-    runs-on: ubuntu-latest
-    needs: create-new-tag
-    steps:
-    
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.CR_USER }}
-        password: ${{ secrets.CR_PWD }}
           
-    - name: Build the Docker image
-      id: build-docker-image
-      run: |
-        set -x  # active le mode debug
-        DOCKER_IMAGE_NAME=$(basename $GITHUB_REPOSITORY) # nom du repo = nom de l'image
-        DOCKER_IMAGE_NAME=$(echo "$DOCKER_IMAGE_NAME" | tr '[:upper:]' '[:lower:]') # nom en minuscules
-        LATEST_TAG="${{ needs.create-new-tag.outputs.new_tag_created }}" 
-        TIMESTAMP=$(date +%s)
-        DOCKER_IMAGE_TAG="${LATEST_TAG}-${TIMESTAMP}"
-        IMAGE_FULL_NAME="${{ secrets.CR_USER }}/${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}"
-        echo "Docker image name: ${IMAGE_FULL_NAME}"
-        docker build --file Dockerfile --tag "$IMAGE_FULL_NAME" .
-        echo "docker_image_built=$IMAGE_FULL_NAME" >> "$GITHUB_ENV"
-        
-    - name: Push Docker image
-      run: |
-        echo "Pushing docker image : $docker_image_built" 
-        docker push "$docker_image_built"
