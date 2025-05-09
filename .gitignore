@@ -1,5 +1,29 @@
+# particulier
+config/paths.yaml
+config/secrets.json
+
+ressources/*/*/*.parquet
+ressources/*/*.log
+ressources/schemas/*.json
+
+# macOS system files
+*/.DS_Store
+*/.AppleDouble
+*/.LSOverride
+
+# Icon files
+Icon?
+._*
+
+# Thumbnails
+._.DS_Store
+
+# Files that might appear on external disk
+.Spotlight-V100
+.Trashes
+
 # Byte-compiled / optimized / DLL files
-__pycache__/
+*/*/__pycache__/
 *.py[cod]
 *$py.class
 
