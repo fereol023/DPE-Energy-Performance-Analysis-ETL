@@ -25,13 +25,15 @@ class S3Connexion(App):
     def __init__(self):
         super().__init__()
         self.__set_client()
+        self.get_today_date = get_today_date
 
+        
     def __set_client(self):
         try:
             if self.env == "LOCAL":
                 self.client = None
             else:
-                s3_config = eval(os.getenv('s3-secrets'))
+                s3_config = eval(os.getenv('s3-secrets')) # TODO dangereux
 
                 # client minio juste utilsé pour créer le bucket
                 self.client = Minio(

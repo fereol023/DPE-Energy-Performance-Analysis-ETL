@@ -7,6 +7,8 @@ from utils.fonctions import get_today_date
 from prefect import flow, task
 from concurrent.futures import ThreadPoolExecutor
 
+from sqlalchemy import create_engine
+
 @task
 def extract_data():
     # Call the extract function from your extract module
@@ -27,14 +29,17 @@ def transform_data(data):
     return pipeline
 
 @task
-def load_data(transformed_data, target_table):
-    # call the load function from your load module in multithreading
-    with ThreadPoolExecutor(max_workers=3) as executor:
-        executor.map(lambda args: load.push_to_api(*args), [
-            (transformed_data['table1'], 'table1', API_CONFIG),
-            (transformed_data['table2'], 'table2', API_CONFIG),
-            (transformed_data['table3'], 'table3', API_CONFIG)
-        ])
+def load_data():
+    # call the load pipeline from your load module    
+    USERNAME = os.getenv('POSTGRES_ADMIN_USERNAME', 'username')
+    PASSWORD = os.getenv('POSTGRES_ADMIN_PASSWORD', 'password')
+    HOST = os.getenv('POSTGRES_HOST', 'localhost')
+    PORT = os.getenv('POSTGRES_PORT', '5432')
+    DATABASE = os.getenv('POSTGRES_DB_NAME', 'mydatabase')
+    load_pipeline = load.LoadToDB(
+        engine = create_engine(f"postgresql://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}")
+        )
+    load_pipeline.run()
 
 @flow(name="ETL-DPE-Analysis", log_prints=False)
 def etl_flow():
@@ -42,8 +47,7 @@ def etl_flow():
     data_silver = transform_data(data_bronze)
     print(data_silver.df_adresses.shape)
     print(data_silver.df_logements.shape)
-    print(data_silver.df_consommations.shape)
-    # load_data(obj_transformed_data, "table1")
+    load_data()
 
 if __name__=="__main__":
     # orchestration

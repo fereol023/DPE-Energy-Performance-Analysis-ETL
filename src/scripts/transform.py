@@ -13,10 +13,10 @@ from utils.mylogging import (
     logger, 
     log_decorator
     )
-from src.scripts import S3Connexion as Connexion
+from src.scripts import S3Connexion as ConnexionMinio
 
 
-class TransformDataEnedisAdeme(Connexion):
+class TransformDataEnedisAdeme(ConnexionMinio):
     """Classe principale qui gère le nettoyage d'un df.
     1 - cast/autocast des colonnes
     2 - selection des colonnes => 3 entités : adresse(id_ban), logement(id_ban), consommation(id_ban)
@@ -33,12 +33,10 @@ class TransformDataEnedisAdeme(Connexion):
         
         self.df_adresses = pd.DataFrame()
         self.df_logements = pd.DataFrame()
-        self.df_consommations = pd.DataFrame()
 
         # update ces valeurs plus tard
         self.cols_adresses = [] 
         self.cols_logements = []
-        self.cols_consommations = [] 
         self.cols_config_fpath = "ressources/schemas/schema_tables.json" if \
             not cols_config_fpath else cols_config_fpath
         self.cols_filled = {"mean": [], "median": []} # cols ou les nan auront été remplis
@@ -143,13 +141,11 @@ class TransformDataEnedisAdeme(Connexion):
 
         # load cols from config
         self.cols_adresses = list(set(self.get_cols("schema-adresses", only_required_columns)))
-        self.cols_logements = list(set(self.get_cols("schema-batiments", only_required_columns)))
-        self.cols_consommations = list(set(self.get_cols("schema-consommations", only_required_columns)))
+        self.cols_logements = list(set(self.get_cols("schema-logements", only_required_columns)))
 
         # split df
         self.df_adresses = self.df[self.cols_adresses].drop_duplicates()
         self.df_logements = self.df[self.cols_logements].drop_duplicates()
-        self.df_consommations = self.df[self.cols_consommations].drop_duplicates()
         return self
     
     def apply_schema_to_df(self, data_schema: dict) -> pd.DataFrame:
@@ -174,8 +170,7 @@ class TransformDataEnedisAdeme(Connexion):
         """Save the transformed data to parquet files."""
         for n,d in [
             ("adresses", self.df_adresses), 
-            ("batiments", self.df_logements), 
-            ("consommations", self.df_consommations)
+            ("logements", self.df_logements), 
             ]:
             self.save_parquet_file(
                 df=d,
