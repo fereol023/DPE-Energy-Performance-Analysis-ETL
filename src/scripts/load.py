@@ -99,7 +99,6 @@ class LoadToDB(ConnexionMinio):
             if key_cols:
                 # récuperer les clés déjà existantes dans la table
                 exiting_keys = existing_df[key_cols[0]].unique()
-                print(f"Clés existantes dans la table {table_name} : {exiting_keys}")
                 # supprimer les lignes du DataFrame qui existent déjà dans la table
                 logger.info(f"Suppression des doublons dans le DataFrame pour la table {table_name} en utilisant la colonne clé {key_cols[0]}.")
                 df = df[~df[key_cols[0]].isin(exiting_keys)]
