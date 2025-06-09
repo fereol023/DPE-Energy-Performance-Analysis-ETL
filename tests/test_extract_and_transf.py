@@ -5,12 +5,12 @@ import pandas as pd
 from src.scripts.extract import DataEnedisAdemeExtractor
 from src.scripts.transform import TransformDataEnedisAdeme
 
-def test_extract():
+def aest_extract():
     extractor = DataEnedisAdemeExtractor()
     extractor.extract(annee=2022, rows=100)
     print(extractor.output.T)
 
-def test_transform():
+def aest_transform():
     example_extract_output = pd.read_parquet("tests/example_extract_output.parquet")
     print(example_extract_output.shape)
     pipeline = TransformDataEnedisAdeme(example_extract_output, inplace=False)
@@ -19,4 +19,4 @@ def test_transform():
     print(pipeline.df_logements.shape)
     print(pipeline.df_consommations.shape)
 
-test_transform()
+aest_transform()
