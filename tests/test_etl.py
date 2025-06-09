@@ -1,12 +1,12 @@
 import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+os.environ['ENV'] = 'LOCAL'
+
 import pandas as pd, copy
 from src.scripts import extract
 
-os.environ['ENV'] = 'LOCAL'
 extractor = extract.DataEnedisAdemeExtractor()
-
 
 def test_abc():
     pass
