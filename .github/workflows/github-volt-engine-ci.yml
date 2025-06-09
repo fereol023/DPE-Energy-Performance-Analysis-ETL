@@ -1,0 +1,13 @@
+name: ghaction-ci-volt-engine
+run-name: CI${{ github.run_number }}-${{ github.event.repository.name }}-${{ github.workflow }}_${{ github.ref_name }}
+on:
+  push:
+    branches:
+      - dev*
+      - main
+jobs:
+    call-github-python-pytests-workflow:
+      uses: fereol023/pipelines_templates/.github/workflows/github-python-pytests.yml@main
+      with:
+        pythonVersion: 3.12
+        hasSubmodules: true
