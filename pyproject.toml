@@ -1,0 +1,13 @@
+[project]
+name = "volt_etl_engine"
+version = "0.1.0"
+authors = [
+    { name="exple author", email="authorfereol023@example.com" },
+]
+description = "description blabla"
+readme = "README.md"
+requires-python = ">=3.11"
+license-files = ["LICEN[CS]E*"]
+
+[project.urls]
+Issues = "https://github.com/fereol023/DPE-Energy-Performance-Analysis-ETL.git"
