@@ -1,13 +1,12 @@
-import requests, os, json
 import pandas as pd
-# import s3fs # built on top of boto3
-from minio import Minio
-from pyarrow import Table, parquet as pq
 from io import BytesIO
-# import polars as pl
+import requests, os, json
 
-from utils.mylogging import logger, log_decorator
-from utils.fonctions import (
+from minio import Minio # use s3fs with boto3 client later
+from pyarrow import Table, parquet as pq
+
+from ..utils.mylogging import logger, log_decorator
+from ..utils.fonctions import (
     get_today_date, 
     get_yesterday_date, 
     set_config_as_env_var as set_config
@@ -106,7 +105,6 @@ class S3Connexion(App):
             # push data parquet to s3
             bucket_name = self.PATHS.get('s3-bucket-name')
             # path_to_s3_object = f"s3://{bucket_name}/{dir}{fname}"
-            # # print(f"Saving {fname} to {path_to_s3_object}")
             # pq.write_to_dataset(
             #     Table.from_pandas(df),
             #     path_to_s3_object,
