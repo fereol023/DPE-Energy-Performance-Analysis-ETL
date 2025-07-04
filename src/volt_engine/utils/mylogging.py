@@ -2,10 +2,11 @@ import os, logging
 from functools import wraps
 from datetime import datetime
 
-from utils.fonctions import get_today_date, set_config_as_env_var
+from ..utils.fonctions import get_today_date, set_config_as_env_var
 
 set_config = set_config_as_env_var
-set_config()
+# set_config()
+
 # config logger 
 # DEBUG: Detailed information, typically of interest only when diagnosing problems.
 # INFO: Confirmation that things are working as expected.
@@ -19,16 +20,16 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(os.getenv("logs-app-name"))
-local_paths = eval(os.getenv("local-paths"))
-log_dir = local_paths.get("path-logs-dir")
-os.makedirs(log_dir, exist_ok=True)
-log_file = os.path.join(log_dir, f"run_{get_today_date()}.log")
+# local_paths = eval(os.getenv("local-paths"))
+# log_dir = local_paths.get("path-logs-dir")
+# os.makedirs(log_dir, exist_ok=True)
+# log_file = os.path.join(log_dir, f"run_{get_today_date()}.log")
 
-file_handler = logging.FileHandler(log_file)
-file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+# file_handler = logging.FileHandler(log_file)
+# file_handler.setLevel(logging.INFO)
+# file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 
-logger.addHandler(file_handler)
+# logger.addHandler(file_handler)
 
 def log_decorator(func):
     """

@@ -1,11 +1,15 @@
 import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.scripts import S3Connexion as Connexion
-from utils.mylogging import logger, log_decorator
-from utils.fonctions import get_today_date, normalize_df_colnames
+from ..scripts import S3Connexion as Connexion
+from ..utils.mylogging import logger, log_decorator
+from ..utils.fonctions import get_today_date, normalize_df_colnames
 
-import pandas as pd, numpy as np, requests, functools, threading
+import pandas as pd
+import numpy as np 
+import requests
+import functools 
+import threading
 from concurrent.futures import ThreadPoolExecutor
 
 

@@ -2,8 +2,8 @@ import os, sys, requests
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 import pandas as pd
-from utils.mylogging import log_decorator, logger
-from src.scripts import S3Connexion as ConnexionMinio
+from ..utils.mylogging import log_decorator, logger
+from ..scripts import S3Connexion as ConnexionMinio
 
 
 @log_decorator

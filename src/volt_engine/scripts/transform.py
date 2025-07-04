@@ -3,17 +3,17 @@ import numpy as np
 import pandas as pd
 
 import re, datetime
-from utils.fonctions import (
+from ..utils.fonctions import (
     normalize_colnames_list, 
     normalize_df_colnames, 
     get_today_date,
     load_json
     )
-from utils.mylogging import (
+from ..utils.mylogging import (
     logger, 
     log_decorator
     )
-from src.scripts import S3Connexion as ConnexionMinio
+from ..scripts import S3Connexion as ConnexionMinio
 
 
 class TransformDataEnedisAdeme(ConnexionMinio):

@@ -1,12 +1,10 @@
 import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from src.scripts import extract, transform, load
-from utils.fonctions import get_today_date
+from ..scripts import extract, transform, load
+from ..utils.fonctions import get_today_date
 
 from prefect import flow, task
-from concurrent.futures import ThreadPoolExecutor
-
 from sqlalchemy import create_engine
 
 @task

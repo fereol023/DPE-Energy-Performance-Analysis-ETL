@@ -1,9 +1,17 @@
-import numpy as np, pandas as pd
+import re
+import os
+import json
+import yaml
+import pickle
+import logging
+import numpy as np
+import pandas as pd
+
+from datetime import datetime
 from functools import lru_cache
 from unidecode import unidecode
-from datetime import datetime
 
-import re, pickle, os, json, yaml, logging
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -15,13 +23,11 @@ def load_yaml(fpath, default_value=None):
         return default_value
     return yaml.safe_load(open(fpath, 'r'))
 
-
 def load_json(fpath, default_value=None):
     if not os.path.exists(fpath):
         logging.warning(f"File {fpath} does not exists !")
         return default_value
     return json.load(open(fpath, 'rb'))
-
 
 def load_pickle(fpath, is_optional=False):
     if (not os.path.exists(fpath) and (not is_optional)):
@@ -29,7 +35,6 @@ def load_pickle(fpath, is_optional=False):
     with open(fpath, 'rb') as f:
         res = pickle.load(f)
     return res
-
 
 def save_pickle(obj, fpath):
     """obj : serialisable obj"""
@@ -39,12 +44,10 @@ def save_pickle(obj, fpath):
         pickle.dump(obj, f)
     print(f"Sauvegarde ok at : {fpath}")
 
-
 @lru_cache(maxsize=1024)
 def normalize_name(colname):
     pat1, pat2 = re.compile('[^0-9a-zA-Z]+'), re.compile('_+')
     return pat1.sub('_', pat2.sub('_', colname))
-
 
 def normalize_colnames_list(list_colnames=[]):
     if list_colnames:
@@ -57,15 +60,11 @@ def sort_colnames(df):
 def normalize_df_colnames(df):
     return sort_colnames(df.rename(columns={c: normalize_name(unidecode(c)).lower() for c in df.columns}))
 
-
-
 def get_today_date():
     return datetime.today().strftime('%Y_%m_%d')
 
-
 def get_yesterday_date():
     return (datetime.today() - pd.Timedelta(days=1)).strftime('%Y_%m_%d')
-
 
 def load_parquet_dataframe(_PATH):
     """TODO"""
@@ -75,17 +74,40 @@ def load_parquet_dataframe(_PATH):
     except Exception as e:
         print(f"Error while loading : {e}")
 
-
 def load_json_config(path):
     return load_json(path, default_value={})
-
 
 def load_yaml_config(fpath):
     return load_yaml(fpath, default_value={})
 
+def get_env_var(var_name, default_value=None, compulsory=False):
+    """
+    Get an environment variable.
+    Returns default_value if not set and value is not compulsory.
+    Returns default_value if not set and value is compulsory, but logs a warning.
+    Raises ValueError if compulsory and not set, without default_value.
+    :param var_name: Name of the environment variable.
+    :param default_value: Default value to return if the variable is not set.
+    :param compulsory: If True, raises an error if the variable is not set and no default_value is provided.
+    :return: The value of the environment variable or the default_value.
+    :raises ValueError: If the variable is compulsory and not set without a default_value. 
+    """
+    value = os.getenv(var_name)
+    if (value is None):
+        if compulsory and (default_value is None):
+            raise ValueError(f"Environment variable {var_name} is not set and is compulsory.")
+        if compulsory and (default_value is not None):
+            logging.warning(f"Environment variable {var_name} is not set, using default value: {default_value}")
+    return default_value
+    
 
-def set_config_as_env_var(dirpath='config/'):
-    """if value is dict use eval(dict) to return to it to dicrt instead of str"""
+def set_config_as_env_var(dirpath=None):
+    """
+    Provides an unified way to set environment 
+    variables from a config directory including 
+    json, yaml and .env files.
+    TODO: add .env files support
+    """
     if os.getenv('ENV') == None:
         config = {}
         for f in os.listdir(dirpath):
