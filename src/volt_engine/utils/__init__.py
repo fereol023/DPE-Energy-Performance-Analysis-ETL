@@ -3,9 +3,18 @@ import uuid, math
 import datetime, time
 from typing import Union
 from functools import wraps
-
 from elasticsearch import Elasticsearch
 from concurrent.futures import ThreadPoolExecutor
+
+from ..utils.fonctions import get_env_var
+
+# configuration for Elasticsearch
+ELASTICSEARCH_HOST = get_env_var('ELASTICSEARCH_HOST', compulsory=True)
+ELASTICSEARCH_PORT = get_env_var('ELASTICSEARCH_PORT', compulsory=True, cast_to_type=int)
+ELASTICSEARCH_INDEX = get_env_var('ELASTICSEARCH_INDEX', compulsory=True)
+LOGGER_APP_NAME = get_env_var('LOGGER_APP_NAME', default_value='volt_engine_logger')
+
+print(f"Elasticsearch configuration: {ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}, index: {ELASTICSEARCH_INDEX}")
 
 def get_custom_logger_dict():
     """
@@ -33,7 +42,7 @@ def get_custom_logger_dict():
 
 class AsyncElasticSearchHandler(logging.Handler):
 
-    def __init__(self, index='default', max_workers=5):
+    def __init__(self, index: str='', max_workers: int=10):
         """ LogRecords attributes :
         ['args', 'created', 'exc_info', 'exc_text', 'filename', 'funcName', 
         'getMessage', 'levelname', 'levelno', 'lineno', 'module', 'msecs', 
@@ -41,9 +50,14 @@ class AsyncElasticSearchHandler(logging.Handler):
         'stack_info', 'taskName', 'thread', 'threadName']
         """
         super().__init__()
-        self.es = Elasticsearch("http://localhost:9200")
+        self.es = Elasticsearch(f"http://{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}")
         self.index = index
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
+        # init index if it does not exist
+        # if not self.es.indices.exists(index=self.index):
+        #     self.es.indices.create(index=self.index, ignore=400)
+        # if not self.es.ping():
+        #     raise ConnectionError(f"Could not connect to Elasticsearch at {ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}")
 
     def emit(self, record):
         # override de emit pour envoyer sur le serveur elastic
@@ -91,11 +105,11 @@ class AsyncElasticSearchHandler(logging.Handler):
             print(f"Failed to log to Elasticsearch: {e}")
 
 # config logger
-logger = logging.getLogger("async_logger")
+logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 # Create an instance of the custom handler
-elastic_handler = AsyncElasticSearchHandler(index="async_logging_test_6")
+elastic_handler = AsyncElasticSearchHandler(index=ELASTICSEARCH_INDEX)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 elastic_handler.setFormatter(formatter)
@@ -146,3 +160,55 @@ def decorator_logger(func):
 
 # some_fonction_ts(100, 2)
 # some_fonction(100, 0)
+
+
+### legacy code
+# import os, logging
+# from functools import wraps
+# from datetime import datetime
+
+# from ..utils.fonctions import get_today_date, set_config_as_env_var
+
+# set_config = set_config_as_env_var
+# # set_config()
+
+# # config logger 
+# # DEBUG: Detailed information, typically of interest only when diagnosing problems.
+# # INFO: Confirmation that things are working as expected.
+# # WARNING: An indication that something unexpected happened, or indicative of some problem in the near future (e.g., ‘disk space low’). The software is still working as expected.
+# # ERROR: Due to a more serious problem, the software has not been able to perform some function.
+# # CRITICAL: A very serious error, indicating that the program itself may be unable to continue running.
+
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+# )
+
+# logger = logging.getLogger(os.getenv("logs-app-name"))
+# # local_paths = eval(os.getenv("local-paths"))
+# # log_dir = local_paths.get("path-logs-dir")
+# # os.makedirs(log_dir, exist_ok=True)
+# # log_file = os.path.join(log_dir, f"run_{get_today_date()}.log")
+
+# # file_handler = logging.FileHandler(log_file)
+# # file_handler.setLevel(logging.INFO)
+# # file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+
+# # logger.addHandler(file_handler)
+
+# def log_decorator(func):
+#     """
+#     A decorator to log the start, end, and any exceptions of a function.
+#     """
+#     @wraps(func)
+#     def wrapper(*args, **kwargs):
+#         logger.info(f"Starting function: {func.__name__}")
+#         try:
+#             d = datetime.now()
+#             result = func(*args, **kwargs)
+#             logger.info(f"{func.__name__} - {datetime.now()-d} - Function {func.__name__} completed successfully.")
+#             return result
+#         except Exception as e:
+#             logger.error(f"{func.__name__} - {datetime.now()-d} - Error in function {func.__name__}: {e}", exc_info=True)
+#             raise
+#     return wrapper

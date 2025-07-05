@@ -1,12 +1,12 @@
-import os, sys, requests
+import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 import pandas as pd
-from ..utils.mylogging import log_decorator, logger
-from ..scripts import S3Connexion as ConnexionMinio
+from ..utils import decorator_logger, logger
+from ..scripts import FileStorageConnexion
 
 
-@log_decorator
+@decorator_logger
 def push_to_api(self, df=None, table_name="", config_api_server={}):
     """
     Envoie le DataFrame à l'endpoint de l'API.
@@ -21,7 +21,7 @@ def push_to_api(self, df=None, table_name="", config_api_server={}):
 
 
 ######## # Load to db for ETL operations
-class LoadToDB(ConnexionMinio):
+class LoadToDB(FileStorageConnexion):
     """
     Classe pour charger les données dans la base de données.
     Hérite de la classe ConnexionMinio pour la connexion S3.
@@ -55,7 +55,7 @@ class LoadToDB(ConnexionMinio):
             raise ValueError("Les DataFrames chargés sont vides. Vérifiez les fichiers dans la silver zone.")
 
 
-    @log_decorator
+    @decorator_logger
     def save_one_table(self, df, table_name=""):
         """
         Envoie un DataFrame à une table spécifique dans la base de données.

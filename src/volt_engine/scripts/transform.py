@@ -9,14 +9,14 @@ from ..utils.fonctions import (
     get_today_date,
     load_json
     )
-from ..utils.mylogging import (
+from ..utils import (
     logger, 
-    log_decorator
+    decorator_logger
     )
-from ..scripts import S3Connexion as ConnexionMinio
+from ..scripts import FileStorageConnexion
 
 
-class TransformDataEnedisAdeme(ConnexionMinio):
+class TransformDataEnedisAdeme(FileStorageConnexion):
     """Classe principale qui gère le nettoyage d'un df.
     1 - cast/autocast des colonnes
     2 - selection des colonnes => 3 entités : adresse(id_ban), logement(id_ban), consommation(id_ban)
@@ -41,7 +41,7 @@ class TransformDataEnedisAdeme(ConnexionMinio):
             not cols_config_fpath else cols_config_fpath
         self.cols_filled = {"mean": [], "median": []} # cols ou les nan auront été remplis
 
-    @log_decorator
+    @decorator_logger
     def auto_cast_object_columns(self):
         """Automatic casting for object columns.
         -----------------------------------
@@ -60,7 +60,7 @@ class TransformDataEnedisAdeme(ConnexionMinio):
         self._save_df_schema(self.df, "schema_exctraction_output_real_types.json")
         return self
     
-    @log_decorator
+    @decorator_logger
     def fillnan_float_dtypes(self):
         """
         Il est conseillé de faire un fillna par la médiane si on a une variable avec des outliers et
@@ -135,7 +135,7 @@ class TransformDataEnedisAdeme(ConnexionMinio):
         else:
             return list(col_config.get("cols", {}).keys())
 
-    @log_decorator
+    @decorator_logger
     def select_and_split(self, only_required_columns=False):
         """Selection des colonnes et split en 3 tables : adresses, logements, consommations"""
 
@@ -178,7 +178,7 @@ class TransformDataEnedisAdeme(ConnexionMinio):
                 fname=f"{n}_{get_today_date()}.parquet"
             )
 
-    @log_decorator
+    @decorator_logger
     def run(self, types_schema_fpath: str=None, keep_only_required: bool=False):
         # étapes de transformation
         if not types_schema_fpath:

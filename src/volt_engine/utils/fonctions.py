@@ -80,7 +80,7 @@ def load_json_config(path):
 def load_yaml_config(fpath):
     return load_yaml(fpath, default_value={})
 
-def get_env_var(var_name, default_value=None, compulsory=False):
+def get_env_var(var_name, default_value=None, compulsory=False, cast_to_type=None):
     """
     Get an environment variable.
     Returns default_value if not set and value is not compulsory.
@@ -89,17 +89,22 @@ def get_env_var(var_name, default_value=None, compulsory=False):
     :param var_name: Name of the environment variable.
     :param default_value: Default value to return if the variable is not set.
     :param compulsory: If True, raises an error if the variable is not set and no default_value is provided.
+    :param cast_to_type: Optional type to cast the value to (e.g., int, float, str).
     :return: The value of the environment variable or the default_value.
     :raises ValueError: If the variable is compulsory and not set without a default_value. 
     """
     value = os.getenv(var_name)
-    if (value is None):
+    if not value:
         if compulsory and (default_value is None):
             raise ValueError(f"Environment variable {var_name} is not set and is compulsory.")
         if compulsory and (default_value is not None):
             logging.warning(f"Environment variable {var_name} is not set, using default value: {default_value}")
-    return default_value
-    
+            value = default_value
+
+    try:
+        return cast_to_type(value) if cast_to_type is not None else value
+    except ValueError as e:
+        raise ValueError(f"Cannot cast environment variable {var_name} to {cast_to_type}: {e}")
 
 def set_config_as_env_var(dirpath=None):
     """

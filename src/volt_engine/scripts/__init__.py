@@ -8,7 +8,7 @@ from io import BytesIO
 from minio import Minio 
 from pyarrow import Table, parquet as pq
 
-from ..utils.mylogging import logger, log_decorator
+from ..utils import logger, decorator_logger
 from ..utils.fonctions import (
     get_env_var,
     get_today_date, 
@@ -28,7 +28,8 @@ class Paths:
         self.PATH_DATA_BRONZE = get_env_var('PATH_DATA_BRONZE', compulsory=True)
         self.PATH_DATA_SILVER = get_env_var('PATH_DATA_SILVER', compulsory=True)
         self.PATH_DATA_GOLD = get_env_var('PATH_DATA_GOLD', compulsory=True)
-
+        logger.info(f"Environment: {self.env}")
+        print(f"Environment: {self.env}")
 
 class FileStorageConnexion(Paths):
     """
@@ -60,7 +61,7 @@ class FileStorageConnexion(Paths):
         except Exception as e:
             raise
 
-    @log_decorator
+    @decorator_logger
     def purge_archive_dir(self):
         """
         Purge the archive directory.
@@ -80,7 +81,7 @@ class FileStorageConnexion(Paths):
         else:
             purge_s3_archive_dir()
 
-    @log_decorator
+    @decorator_logger
     def save_parquet_file(self, df, dir, fname):
         """
         Save a DataFrame to a parquet file.
@@ -127,7 +128,7 @@ class FileStorageConnexion(Paths):
         else:
             save_parquet_file_to_s3()
 
-    @log_decorator
+    @decorator_logger
     def load_parquet_file(self, dir, fname):
         """
         Load a parquet file into a DataFrame.
