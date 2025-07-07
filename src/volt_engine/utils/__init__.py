@@ -12,23 +12,22 @@ from ..utils.fonctions import get_env_var
 ELASTICSEARCH_HOST = get_env_var('ELASTICSEARCH_HOST', compulsory=True)
 ELASTICSEARCH_PORT = get_env_var('ELASTICSEARCH_PORT', compulsory=True, cast_to_type=int)
 ELASTICSEARCH_INDEX = get_env_var('ELASTICSEARCH_INDEX', compulsory=True)
-LOGGER_APP_NAME = get_env_var('LOGGER_APP_NAME', default_value='volt_engine_logger')
+LOGGER_APP_NAME = get_env_var('LOGGER_APP_NAME', default_value='volt_engine_logger', compulsory=True)
+SESSION_CORRELATION_ID = get_env_var('SESSION_CORRELATION_ID', default_value=str(uuid.uuid4()), compulsory=True)
 
-print(f"Elasticsearch configuration: {ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}, index: {ELASTICSEARCH_INDEX}")
 
 def get_custom_logger_dict():
     """
     Liste des champs :
     app_name, function_name, timestamp, duration (ms),
-    ln_duration (ms), correlation_id, status, severity, details[message]
+    correlation_id, status, severity, details[message]
     """
     return {
         "app_name": "", # est le nom du logger 
         "function_name": "",
         "timestamp": "",
-        "@timestamp": "",
-        "duration (ms)": "",
-        "ln_duration (ms)": "",
+        # "@timestamp": "",
+        "duration_ms": -1, # default -1, si pas de duration
         "correlation_id": "",
         "status": "",
         "severity": "",
@@ -54,10 +53,10 @@ class AsyncElasticSearchHandler(logging.Handler):
         self.index = index
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         # init index if it does not exist
-        # if not self.es.indices.exists(index=self.index):
-        #     self.es.indices.create(index=self.index, ignore=400)
-        # if not self.es.ping():
-        #     raise ConnectionError(f"Could not connect to Elasticsearch at {ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}")
+        if not self.es.indices.exists(index=self.index):
+            self.es.indices.create(index=self.index, ignore=400)
+        if not self.es.ping():
+            raise ConnectionError(f"Could not connect to Elasticsearch at {ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}")
 
     def emit(self, record):
         # override de emit pour envoyer sur le serveur elastic
@@ -80,9 +79,8 @@ class AsyncElasticSearchHandler(logging.Handler):
             parsed_log["app_name"] = _log_msg["app_name"]
             parsed_log["timestamp"] = _log_msg["timestamp"]
             parsed_log["function_name"] = _log_msg["function_name"]
-            parsed_log["duration (ms)"] = _log_msg["duration (ms)"]
+            parsed_log["duration_ms"] = _log_msg["duration_ms"]
             parsed_log["correlation_id"] = _log_msg["correlation_id"]
-            parsed_log["ln_duration (ms)"] = _log_msg["ln_duration (ms)"] 
             parsed_log["details"]["message"] = _log_msg["details"]["message"]
             return parsed_log
         except:
@@ -105,19 +103,34 @@ class AsyncElasticSearchHandler(logging.Handler):
             print(f"Failed to log to Elasticsearch: {e}")
 
 # config logger
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+def get_async_elk_logger() ->logging.Logger:
+    """
+    Configure the logger to send logs to elk server.
+    """
+    import queue
 
-# Create an instance of the custom handler
-elastic_handler = AsyncElasticSearchHandler(index=ELASTICSEARCH_INDEX)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    _logger = logging.getLogger(name=LOGGER_APP_NAME)
+    _logger.setLevel(logging.INFO)
+    _elastic_handler = AsyncElasticSearchHandler(index=ELASTICSEARCH_INDEX)
+    _formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    _elastic_handler.setFormatter(_formatter)
 
-elastic_handler.setFormatter(formatter)
-logger.addHandler(elastic_handler)
+    # Create a queue for log records
+    _log_queue = queue.Queue(-1)
+    _queue_handler = logging.handlers.QueueHandler(_log_queue)
+    _logger.addHandler(_queue_handler)
+
+    # Start a listener with the elastic handler
+    listener = logging.handlers.QueueListener(_log_queue, _elastic_handler)
+    listener.start()
+
+    _logger.propagate = False  # Prevents the log messages from being propagated to the root logger
+    _logger.info(f"Logger initialized for {LOGGER_APP_NAME} with Elasticsearch")
+    return _logger
 
 
 # --- logger pour les fonctions 
-def decorator_logger(func):
+def decorator_logger(func, logger=get_async_elk_logger()):
     @wraps(func)
     def wrapper(*args, **kwargs):
         s = datetime.datetime.now()
@@ -127,21 +140,25 @@ def decorator_logger(func):
         try:
             result = func(*args, **kwargs)
             log_entry["status"] = "success"
-            return result
         except Exception as e:
             log_entry["status"] = "fail"
             log_entry["details"]["message"] = str(e)
-            raise
         finally:
-            log_entry["duration (ms)"] = round((datetime.datetime.now() - s).total_seconds() * 1_000, 3)
-            log_entry["ln_duration (ms)"] = round(math.log(log_entry["duration (ms)"]), 3)
+            log_entry["duration_ms"] = round((datetime.datetime.now() - s).total_seconds() * 1_000, 3)
+            log_entry["correlation_id"] = SESSION_CORRELATION_ID
+            log_entry["app_name"] = LOGGER_APP_NAME
             if log_entry["status"] == "fail":
+                log_entry["severity"] = "CRITICAL"
                 logger.critical(log_entry)
+                raise Exception(f"Error in function {func.__name__}: {log_entry['details']['message']}")
             else:
                 logger.info(log_entry)
+                log_entry["severity"] = "CRITICAL"
+                # print(log_entry)
+                return result
     return wrapper
 
-
+logger = get_async_elk_logger()
 
 # # Example usage
 # logger.info("This is an info message.")

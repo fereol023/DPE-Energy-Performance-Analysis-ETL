@@ -4,18 +4,30 @@ import json
 import yaml
 import pickle
 import logging
+import warnings
 import numpy as np
 import pandas as pd
 
 from datetime import datetime
-from functools import lru_cache
 from unidecode import unidecode
+from functools import lru_cache, wraps
 
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
+
+def deprecation_warning(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        warnings.warn(
+            f"Function {func.__name__} is deprecated and will be removed in future versions.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        return func(*args, **kwargs)
+    return wrapper
 
 def load_yaml(fpath, default_value=None):
     if not os.path.exists(fpath):
@@ -95,11 +107,12 @@ def get_env_var(var_name, default_value=None, compulsory=False, cast_to_type=Non
     """
     value = os.getenv(var_name)
     if not value:
-        if compulsory and (default_value is None):
-            raise ValueError(f"Environment variable {var_name} is not set and is compulsory.")
-        if compulsory and (default_value is not None):
-            logging.warning(f"Environment variable {var_name} is not set, using default value: {default_value}")
-            value = default_value
+        if compulsory:
+            if not default_value:
+                raise ValueError(f"Environment variable {var_name} is not set and is compulsory.")
+            else:
+                logging.warning(f"Environment variable {var_name} is not set, using default value: {default_value}")
+                value = default_value
 
     try:
         return cast_to_type(value) if cast_to_type is not None else value

@@ -267,7 +267,6 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         # on a une liste de listes, chaque liste correspond à un id_ban
         # on obtient une liste à 2 niveaux pour chaque Id_BAN 
         # on a plusieurs lignes ademe  
-        print(ademe_data_res)      
         for _ in ademe_data_res:
             ademe_data.extend(_)
         del ademe_data_res
@@ -283,7 +282,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         del ademe_data
         return self
 
-   # TACHE MERGE 1 
+    # TACHE MERGE 1 
     @decorator_logger
     def merge_and_save_enedis_with_ban_as_output(self): 
         """obtenir le df pandas des données enedis (requete) + les données de la BAN pour les adresses trouvées."""
@@ -311,6 +310,8 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         self.ban_data = pd.DataFrame() # free memory
         return self
 
+    # TACHE MERGE 2 (final)
+    @decorator_logger
     def merge_all_as_output(self):
         """
         Merge all dataframes to get the final dataframe.
@@ -321,10 +322,13 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
             fname=f"enedis_with_ban_data_tmp_{get_today_date()}.parquet"
         )
         # enedis_with_ban_data = enedis_with_ban_data.add_suffix('_enedis_with_ban')
-        print(f"Enedis with BAN data loaded : {enedis_with_ban_data.shape[0]} rows, {enedis_with_ban_data.shape[1]} columns.")
-        print(sorted(enedis_with_ban_data.columns))
-        print(f"Ademe data loaded : {self.ademe_data.shape[0]} rows, {self.ademe_data.shape[1]} columns.")
-        print(sorted(self.ademe_data.columns))
+        logger.info(f"Enedis with BAN data loaded : {enedis_with_ban_data.shape[0]} rows, {enedis_with_ban_data.shape[1]} columns.")
+        logger.info(f"Ademe data loaded : {self.ademe_data.shape[0]} rows, {self.ademe_data.shape[1]} columns.")
+        assert 'Identifiant__BAN_ademe' in self.ademe_data.columns, \
+            "Identifiant__BAN_ademe column not found in Ademe data. Check the schema or the data extraction process."
+        assert 'id_BAN' in enedis_with_ban_data.columns, \
+            "id_BAN column not found in Enedis with BAN data. Check the schema or the data extraction process."
+        # merge enedis with ban data and ademe data
         self.output = pd.merge(self.ademe_data,
                             enedis_with_ban_data,
                             how='left',
@@ -339,20 +343,20 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         )
         if self.debug: self.debugger.update({'sample_output': self.output.tail(5)})
 
-    @decorator_logger
-    def extract_year_rows(self, year:int=2018, rows:int=20):
-        # improve to handle pagination
-        res = self.get_enedis_with_ban_with_ademe(self.get_url_enedis_year_rows(year,rows), from_input=False)
-        logger.info(f"Extraction results : {res.shape[0]} rows, {res.shape[1]} columns.")
-        self.result = res
-        self.purge_archive_dir()
+    # @decorator_logger
+    # def extract_year_rows(self, year:int=2018, rows:int=20):
+    #     # improve to handle pagination
+    #     res = self.get_enedis_with_ban_with_ademe(self.get_url_enedis_year_rows(year,rows), from_input=False)
+    #     logger.info(f"Extraction results : {res.shape[0]} rows, {res.shape[1]} columns.")
+    #     self.result = res
+    #     self.purge_archive_dir()
 
-    @decorator_logger
-    def extract_batch(self):
-        res = self.get_enedis_with_ban_with_ademe(None, from_input=True)
-        logger.info(f"Extraction results : {res.shape[0]} rows, {res.shape[1]} columns.")
-        self.result = res
-        self.purge_archive_dir()
+    # @decorator_logger
+    # def extract_batch(self):
+    #     res = self.get_enedis_with_ban_with_ademe(None, from_input=True)
+    #     logger.info(f"Extraction results : {res.shape[0]} rows, {res.shape[1]} columns.")
+    #     self.result = res
+    #     self.purge_archive_dir()
 
     @decorator_logger
     def extract(self, 
