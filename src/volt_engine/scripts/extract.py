@@ -329,6 +329,8 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         assert 'id_BAN' in enedis_with_ban_data.columns, \
             "id_BAN column not found in Enedis with BAN data. Check the schema or the data extraction process."
         # merge enedis with ban data and ademe data
+        self.ademe_data['Identifiant__BAN_ademe'] = self.ademe_data['Identifiant__BAN_ademe'].astype('int64')
+        enedis_with_ban_data['id_BAN'] = enedis_with_ban_data['id_BAN'].astype('int64')
         self.output = pd.merge(self.ademe_data,
                             enedis_with_ban_data,
                             how='left',
