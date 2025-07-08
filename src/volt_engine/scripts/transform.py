@@ -163,7 +163,11 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
         missing_cols = list(set(self.cols_adresses).union(set(self.cols_logements)) - set(self.df.columns))
         if missing_cols:
             for c in missing_cols:
-                self.df[c]=self.get_default_value_from_golden_colname(c) #default value
+                if c in self.cols_adresses:
+                    self.df[c]=self.get_default_value_from_golden_colname(key="schema-adresses", colname=c) #default value
+                if c in self.cols_logements:
+                    self.df[c]=self.get_default_value_from_golden_colname(key="schema-logements", colname=c) #default value
+
         # split df
         self.df_adresses = self.df[self.cols_adresses].drop_duplicates()
         self.df_logements = self.df[self.cols_logements].drop_duplicates()
