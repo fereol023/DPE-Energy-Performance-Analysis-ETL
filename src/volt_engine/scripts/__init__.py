@@ -157,20 +157,20 @@ class FileStorageConnexion(Paths):
             return load_parquet_file_from_s3()
 
     
-    def _save_df_schema(self, df, fname):
+    def _save_df_schema(self, df, fpath):
         """Save the schema of a DataFrame to a JSON file."""        
         try:
             schema = df.dtypes.apply(lambda x: x.name).to_dict()
-            with open(f"ressources/schemas/{fname}", "w") as f:
+            with open(fpath, "w") as f:
                 json.dump(schema, f, separators=(',', ': '), indent=4)
         except Exception as e:
             logger.error(f"Erreur sauvegarde schema data parquet file {fname} to {dir}: {e}")
             raise
 
-    def _load_df_schema(self, fname):
+    def _load_df_schema(self, fpath):
         """Load the schema of a DataFrame from a JSON file."""
         try:
-            with open(f"ressources/schemas/{fname}", "r") as f:
+            with open(fpath, "r") as f:
                 return json.load(f)
         except Exception as e:
             logger.error(f"Erreur chargement schema data parquet file {fname} from {dir}: {e}")

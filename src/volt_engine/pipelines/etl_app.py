@@ -1,52 +1,55 @@
-import sys, os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-
 from ..scripts import extract, transform, load
-from ..utils.fonctions import get_today_date
+from ..utils.fonctions import get_env_var
+from ..utils import decorator_logger
 
 from prefect import flow, task
 from sqlalchemy import create_engine
 
+@decorator_logger
 @task
-def extract_data():
-    # Call the extract function from your extract module
-    extract_pipeline = extract.DataEnedisAdemeExtractor()
+def extract_data_task():
+    """call the extract function from extract module"""
+    extract_pipeline = extract.DataEnedisAdemeExtractor(debug=False)
     extract_pipeline.extract(annee=2022, rows=100)
-    data_bronze = extract_pipeline.output
-    return data_bronze
+    return extract_pipeline.output
 
+@decorator_logger
 @task
-def transform_data(data):
-    # call the transform function from your transform module
-    pipeline = transform\
-        .TransformDataEnedisAdeme(
+def transform_data_task(data):
+    """call the transform function from your transform module"""
+    transf_pipeline = transform\
+        .DataEnedisAdemeTransformer(
             data, 
             inplace=False, 
-            cols_config_fpath=os.getenv('Transform_Step_Cols_Config_Path'))
-    pipeline.run()
-    return pipeline
+            golden_data_config_fpath=get_env_var('SCHEMA_GOLDEN_DATA_FILEPATH', compulsory=True))
+    transf_pipeline.run(
+        types_schema_fpath=None, # schema de la data silver en input (pour le cast), si none est inféré
+        keep_only_required=False
+    )
+    return transf_pipeline
 
+@decorator_logger
 @task
-def load_data():
-    # call the load pipeline from your load module    
-    USERNAME = os.getenv('POSTGRES_ADMIN_USERNAME', 'username')
-    PASSWORD = os.getenv('POSTGRES_ADMIN_PASSWORD', 'password')
-    HOST = os.getenv('POSTGRES_HOST', 'localhost')
-    PORT = os.getenv('POSTGRES_PORT', '5432')
-    DATABASE = os.getenv('POSTGRES_DB_NAME', 'mydatabase')
-    load_pipeline = load.LoadToDB(
+def load_data_task():
+    """call the load pipeline from your load module"""   
+    USERNAME = get_env_var('POSTGRES_ADMIN_USERNAME', 'username')
+    PASSWORD = get_env_var('POSTGRES_ADMIN_PASSWORD', 'password')
+    HOST = get_env_var('POSTGRES_HOST', 'localhost')
+    PORT = get_env_var('POSTGRES_PORT', '5432')
+    DATABASE = get_env_var('POSTGRES_DB_NAME', 'mydatabase')
+
+    load_pipeline = load.DataEnedisAdemeLoader(
         engine = create_engine(f"postgresql://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}")
         )
     load_pipeline.run()
 
+@decorator_logger
 @flow(name="ETL-DPE-Analysis", log_prints=False)
-def etl_flow():
-    data_bronze = extract_data()
-    data_silver = transform_data(data_bronze)
-    print(data_silver.df_adresses.shape)
-    print(data_silver.df_logements.shape)
-    load_data()
+def dpe_enedis_ademe_etl_flow():
+    data_bronze = extract_data_task()
+    transform_data_task(data_bronze)
+    load_data_task()
 
 if __name__=="__main__":
     # orchestration
-    etl_flow()
+    dpe_enedis_ademe_etl_flow()

@@ -1,6 +1,4 @@
-import sys, os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
+import os
 import requests
 import functools 
 import threading
@@ -329,8 +327,8 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         assert 'id_BAN' in enedis_with_ban_data.columns, \
             "id_BAN column not found in Enedis with BAN data. Check the schema or the data extraction process."
         # merge enedis with ban data and ademe data
-        self.ademe_data['Identifiant__BAN_ademe'] = self.ademe_data['Identifiant__BAN_ademe'].astype('int64')
-        enedis_with_ban_data['id_BAN'] = enedis_with_ban_data['id_BAN'].astype('int64')
+        self.ademe_data['Identifiant__BAN_ademe'] = self.ademe_data['Identifiant__BAN_ademe'].astype('string')
+        enedis_with_ban_data['id_BAN'] = enedis_with_ban_data['id_BAN'].astype('string')
         self.output = pd.merge(self.ademe_data,
                             enedis_with_ban_data,
                             how='left',
@@ -345,21 +343,6 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         )
         if self.debug: self.debugger.update({'sample_output': self.output.tail(5)})
 
-    # @decorator_logger
-    # def extract_year_rows(self, year:int=2018, rows:int=20):
-    #     # improve to handle pagination
-    #     res = self.get_enedis_with_ban_with_ademe(self.get_url_enedis_year_rows(year,rows), from_input=False)
-    #     logger.info(f"Extraction results : {res.shape[0]} rows, {res.shape[1]} columns.")
-    #     self.result = res
-    #     self.purge_archive_dir()
-
-    # @decorator_logger
-    # def extract_batch(self):
-    #     res = self.get_enedis_with_ban_with_ademe(None, from_input=True)
-    #     logger.info(f"Extraction results : {res.shape[0]} rows, {res.shape[1]} columns.")
-    #     self.result = res
-    #     self.purge_archive_dir()
-
     @decorator_logger
     def extract(self, 
         from_input:bool=False, 
@@ -367,7 +350,6 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         code_departement:int=75, 
         annee:int=2022, 
         rows:int=10, 
-        output_schema_fname:str=None,
         n_threads_for_querying:int=10,
         save_schema:bool=True
         )-> None:
@@ -379,7 +361,6 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         :param code_departement: Code of the department to filter the data.
         :param annee: Year to filter the data.
         :param rows: Number of rows to extract from the Enedis API.
-        :param output_schema_fname: Name of the output schema file to save.
         :param n_threads_for_querying: Number of threads to use for querying the BAN API.
         :param save_schema: If True, save the schema of the output dataframe.
         
@@ -397,7 +378,6 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         4. Finally, it will extract Ademe data based on the BAN data and merge all dataframes.
         5. The final output will be saved in a parquet file and the
         """
-
         if from_input:
             self.PATH_FILE_INPUT_ENEDIS_CSV = get_env_var(
                 'PATH_FILE_INPUT_ENEDIS_CSV',
@@ -412,7 +392,12 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         logger.info(f"Extraction results : {self.output.shape[0]} rows, {self.output.shape[1]} columns.")
         # save schema
         if save_schema:
-            if not os.path.exists(f"ressources/schemas/{output_schema_fname}"):
-                os.makedirs(f"ressources/schemas", exist_ok=True)
-                self._save_df_schema(self.output, output_schema_fname)
-                logger.info(f"Extraction schema saved in : {output_schema_fname}")
+            fpath = get_env_var('SCHEMA_SILVER_DATA_FILEPATH', compulsory=True)
+            fdir = os.path.dirname(fpath)
+            if not os.path.exists(fpath): 
+                os.makedirs(fdir, exist_ok=True)
+                self._save_df_schema(self.output, fpath)
+                logger.info(f"Extraction schema saved in : {fpath}")
+        if self.debug: 
+            import pprint
+            pprint.pprint(self.debugger)

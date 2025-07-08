@@ -84,14 +84,14 @@ The loading step is responsible for persisting the transformed data into the tar
 Example usage:
 ```python
 from dpe_enedis_ademe_etl_engine.pipelines import DataEnedisAdemeLoader
+from sqlalchemy import create_engine
 
-loader = DataEnedisAdemeLoader()
-loader.load(
-  input_path="etl/data/2_silver/transformed_data.csv",
-  db_schema_path="etl_engine/ressources/schemas/schema_golden_data.json"
-)
+engine = create_engine(f"postgresql://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}")
+# these informations are defined in env vars
+loader = DataEnedisAdemeLoader(engine)
+loader.run()
 ```
-This will load the data from the specified CSV file into the configured PostgreSQL table. Make sure your environment variables for the database connection are set correctly. You can customize the loading logic or implement additional loaders for other storage backends as needed.
+This will load the data from the specified files from **the gold data zone** into the configured PostgreSQL table. Make sure your environment variables for the database connection are set correctly. You can customize the loading logic or implement additional loaders for other storage backends as needed.
 
 ### Environment variables
 
