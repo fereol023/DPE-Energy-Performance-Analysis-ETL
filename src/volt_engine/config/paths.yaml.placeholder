@@ -1,7 +1,0 @@
-local-paths:
-  path-logs-dir : "ressources/logs/"
-  path-data-archive : "ressources/data/0_archive/"
-  path-data-bronze : "ressources/data/1_bronze/"
-  path-data-silver : "ressources/data/2_silver/"
-  path-data-gold : "ressources/data/3_gold/"
-  batch-input-enedis-csv-fpath : "ressources/0_archive/conso_enedis_2022.csv"

@@ -1,19 +1,26 @@
 [project]
-name = "volt_engine"
-version = "0.1.2"
+name = "dpe_enedis_ademe_etl_engine"
+version = "1.0.0"
 authors = [
-    { name="exple author", email="authorfereol023@example.com" },
+    { name="Féréol Gbenou", email="fereol.gbenou@ynov.com" },
 ]
-description = "description blabla"
+description = "Dataflows (ETL) backend for DPE Energy Performance Analysis."
 readme = "README.md"
 requires-python = ">=3.11"
 license-files = ["LICEN[CS]E*"]
 dependencies = [
-    "minio",
-    "numpy", 
-    "pandas",
-    "prefect",
+    "httpx==0.28.1",
+    "minio==7.2.15",
+    "numpy==2.3.1", 
+    "pandas==2.3.1",
+    "PyYAML==6.0.2",
+    "pyarrow==20.0.0",
+    "prefect==3.4.7",
+    "Requests==2.32.4",
     "sqlalchemy",
+    "elasticsearch==8.15.1",
+    "SQLAlchemy==2.0.41", 
+    "Unidecode==1.4.0"
 ]
 
 [project.urls]

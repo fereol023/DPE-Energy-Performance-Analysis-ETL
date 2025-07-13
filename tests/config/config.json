@@ -1,0 +1,23 @@
+{
+    "ENV": "LOCAL",
+    "APP_NAME": "DPE-ETL",
+    "APP_VERSION": "0.0.1",
+    "APP_DESCRIPTION": "backend for DPE Energy Performance Analysis",
+    "LOGGER_APP_NAME": "ETL-Logger",
+
+    "POSTGRES_HOST": "host",
+    "POSTGRES_PORT": "5432",
+    "POSTGRES_DB_NAME": "xxxxxx",
+    "POSTGRES_ADMIN_USERNAME": "xxxxxx",
+    "POSTGRES_ADMIN_PASSWORD": "xxxxxx",
+
+    "S3_ACCESS_KEY": "xxxxxx",
+    "S3_SECRET_KEY": "xxxxxx",
+    "S3_BUCKET_NAME": "dpe-storage-v1",
+    "S3_REGION": "eu-west",
+    "S3_ENDPOINT_URL": "host:9000",
+    
+    "ELASTICSEARCH_HOST": "host",
+    "ELASTICSEARCH_PORT": "9200",
+    "ELASTICSEARCH_INDEX": "test_pytest_idx"
+}

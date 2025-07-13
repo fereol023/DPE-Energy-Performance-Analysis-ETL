@@ -1,6 +1,11 @@
 # DPE-Energy-Performance-Analysis-ETL
 ETL module repos for DPE-Energy-Performance-Analysis-ETL package.
 
+| | |
+| --- | --- |
+| CI Testing | [![CI - Test](https://img.shields.io/badge/pytests-passing-green)](https://github.com/fereol023/DPE-Energy-Performance-Analysis-ETL/blob/main/.github/workflows/github-volt-engine-ci.yml)|
+| Package | [![PyPI Latest Release](https://img.shields.io/badge/dpe_enedis_ademe_etl_engine-v1.0.0-blue)](https://test.pypi.org/project/volt-etl-engine/) |
+
 ### 📃 Description
 
 This ETL module is responsible for extracting, transforming, and loading energy performance data for the DPE-Energy-Performance-Analysis project. It supports both local and containerized (Docker) execution modes, enabling flexible data processing workflows. The ETL pipeline handles data ingestion from CSV files or API sources, applies schema-based validation and transformation, and loads the processed data into a PostgreSQL database or remote storage (S3). For the input, you are free to provide a csv input file (which must meet the input schema) (see [here](input_schema.placeholder)) or not. If not provided, the ETL will fetch directly from Enedis API source (see [API sources](#API-sources)). **Providing a csv input file is recommended for batch extraction** exemple when targetting specifc locations. Logging and profiling are integrated for monitoring and debugging purposes.
