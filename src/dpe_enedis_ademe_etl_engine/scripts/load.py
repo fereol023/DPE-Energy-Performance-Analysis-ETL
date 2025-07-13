@@ -1,12 +1,12 @@
-import os, sys, requests
+import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 import pandas as pd
-from utils.mylogging import log_decorator, logger
-from src.scripts import S3Connexion as ConnexionMinio
+from ..utils import decorator_logger, logger
+from ..scripts.filestorage_helper import FileStorageConnexion
+from ..utils.fonctions import get_env_var
 
-
-@log_decorator
+@decorator_logger
 def push_to_api(self, df=None, table_name="", config_api_server={}):
     """
     Envoie le DataFrame à l'endpoint de l'API.
@@ -21,15 +21,15 @@ def push_to_api(self, df=None, table_name="", config_api_server={}):
 
 
 ######## # Load to db for ETL operations
-class LoadToDB(ConnexionMinio):
+class DataEnedisAdemeLoader(FileStorageConnexion):
     """
     Classe pour charger les données dans la base de données.
-    Hérite de la classe ConnexionMinio pour la connexion S3.
+    Hérite de la classe FileStorageConnexion pour la connexion S3.
     """
 
     def __init__(self, engine=None, db_connection=None):
         """
-        Initialise la classe LoadToDB.
+        Initialise la classe DataEnedisAdemeLoader.
         :param db_connection: Connexion à la base de données envoyé au job depuis le serveur API (by design).
         autre solution : faire une connexion à la base de données ici ou une classe dediée.
         anyway : la db connection doit avoir les droits d'écriture sur la base de données / ou admin.
@@ -44,18 +44,18 @@ class LoadToDB(ConnexionMinio):
             "logements": ["_id_ademe"],
         }
         self.df_adresses = self.load_parquet_file(
-            dir=self.PATHS.get("path-data-silver"),
+            dir=get_env_var('PATH_DATA_GOLD', compulsory=True),
             fname=f"adresses_{self.get_today_date()}.parquet"
         )
         self.df_logements = self.load_parquet_file(
-            dir=self.PATHS.get("path-data-silver"),
+            dir=get_env_var('PATH_DATA_GOLD', compulsory=True),
             fname=f"logements_{self.get_today_date()}.parquet"
         )
         if self.df_adresses.empty or self.df_logements.empty:
-            raise ValueError("Les DataFrames chargés sont vides. Vérifiez les fichiers dans la silver zone.")
+            raise ValueError("Les DataFrames chargés sont vides. Vérifiez les fichiers dans la gold zone.")
 
 
-    @log_decorator
+    @decorator_logger
     def save_one_table(self, df, table_name=""):
         """
         Envoie un DataFrame à une table spécifique dans la base de données.
@@ -117,6 +117,7 @@ class LoadToDB(ConnexionMinio):
             logger.error(f"Erreur lors de l'envoi des données à la table {table_name}: {e}")
             raise
 
+    @decorator_logger
     def run(self):
         """
         Envoie les données dans la bdd

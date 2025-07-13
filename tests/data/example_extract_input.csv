@@ -1,0 +1,4 @@
+,annee,code_iris,nom_iris,numero_de_voie,indice_de_repetition,type_de_voie,libelle_de_voie,code_commune,nom_commune,segment_de_client,nombre_de_logements,consommation_annuelle_totale_de_l_adresse_mwh,consommation_annuelle_moyenne_par_site_de_l_adresse_mwh,consommation_annuelle_moyenne_de_la_commune_mwh,adresse,code_epci,code_departement,code_region,tri_des_adresses
+0,2022,060290102,La Source,13,,RUE,LACOUR,06029,Cannes,RESIDENTIEL,60,70.96,1.183,2.96,13 RUE LACOUR,200039915,06,93,60015
+1,2022,060290111,Croisette-Palm-Beach,20,,RUE,LATOUR MAUBOURG,06029,Cannes,RESIDENTIEL,110,251.986,2.291,2.96,20 RUE LATOUR MAUBOURG,200039915,06,93,60023
+2,2022,060290117,Le Vieux Port-Les îles,23,,AVENUE,LAUGIER,06029,Cannes,RESIDENTIEL,57,94.023,1.65,2.96,23 AVENUE LAUGIER,200039915,06,93,60028
