@@ -45,6 +45,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         self.get_url_enedis_year_rows = lambda annee, rows: f"https://data.enedis.fr/api/explore/v2.1/catalog/datasets/consommation-annuelle-residentielle-par-adresse/records?where=annee%20%3D%20date'{annee}'&limit={rows}"
         # generer une url pour requeter l'api de la ban à partir d'une adresse
         self.get_url_ademe_filter_on_ban = lambda key: f"https://data.ademe.fr/data-fair/api/v1/datasets/dpe-v2-logements-existants/lines?size=1000&format=json&qs=Identifiant__BAN%3A{key}"
+        self.get_url_ademe_filter_on_ban = lambda key: f"https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?q_fields=identifiant_ban&q={key}"
         # generer une url pour requeter l'api de la ban à partir d'une adresse
         self.get_url_ban_filter_on_adresse = lambda key: f"https://api-adresse.data.gouv.fr/search/?q={key}&limit=1"
 
@@ -314,6 +315,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
     def merge_all_as_output(self):
         """
         Merge all dataframes to get the final dataframe.
+
         """
         # reconstituer le dataframe complet
         enedis_with_ban_data = self.load_parquet_file(
@@ -323,17 +325,17 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         # enedis_with_ban_data = enedis_with_ban_data.add_suffix('_enedis_with_ban')
         logger.info(f"Enedis with BAN data loaded : {enedis_with_ban_data.shape[0]} rows, {enedis_with_ban_data.shape[1]} columns.")
         logger.info(f"Ademe data loaded : {self.ademe_data.shape[0]} rows, {self.ademe_data.shape[1]} columns.")
-        assert 'Identifiant__BAN_ademe' in self.ademe_data.columns, \
-            "Identifiant__BAN_ademe column not found in Ademe data. Check the schema or the data extraction process."
+        assert 'identifiant_ban_ademe' in self.ademe_data.columns, \
+            "identifiant_ban_ademe column not found in Ademe data. Check the schema or the data extraction process. (Identifiant__BAN or identifiant_ban)"
         assert 'id_BAN' in enedis_with_ban_data.columns, \
             "id_BAN column not found in Enedis with BAN data. Check the schema or the data extraction process."
         # merge enedis with ban data and ademe data
-        self.ademe_data['Identifiant__BAN_ademe'] = self.ademe_data['Identifiant__BAN_ademe'].astype('string')
+        self.ademe_data['identifiant_ban_ademe'] = self.ademe_data['identifiant_ban_ademe'].astype('string')
         enedis_with_ban_data['id_BAN'] = enedis_with_ban_data['id_BAN'].astype('string')
         self.output = pd.merge(self.ademe_data,
                             enedis_with_ban_data,
                             how='left',
-                            left_on='Identifiant__BAN_ademe',
+                            left_on='identifiant_ban_ademe',
                             right_on='id_BAN').drop_duplicates().reset_index(drop=True)
         # normaliser les noms de colonnes et trier les colonnes
         self.output = normalize_df_colnames(self.output)

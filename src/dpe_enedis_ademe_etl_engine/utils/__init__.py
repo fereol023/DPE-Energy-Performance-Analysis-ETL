@@ -15,7 +15,7 @@ from ..utils.fonctions import get_env_var, get_today_date
 ELASTICSEARCH_HOST = get_env_var('ELASTICSEARCH_HOST', compulsory=True)
 ELASTICSEARCH_PORT = get_env_var('ELASTICSEARCH_PORT', compulsory=True, cast_to_type=int)
 ELASTICSEARCH_INDEX = get_env_var('ELASTICSEARCH_INDEX', compulsory=True)
-LOGGER_APP_NAME = get_env_var('LOGGER_APP_NAME', default_value='dpe_ETL_engine_logger', compulsory=True)
+LOGGER_APP_NAME = get_env_var('ETL_LOGGER_APP_NAME', default_value='dpe_ETL_engine_logger', compulsory=True)
 SESSION_CORRELATION_ID = get_env_var('SESSION_CORRELATION_ID', default_value=str(uuid.uuid4()), compulsory=True)
 
 
@@ -107,13 +107,13 @@ class AsyncElasticSearchHandler(logging.Handler):
 
 
 # config logger
-def get_async_elk_logger() ->logging.Logger:
+def get_async_elk_logger(app_name=None) ->logging.Logger:
     """
     Configure the logger to send logs to elk server.
     """
     import queue
 
-    _logger = logging.getLogger(name=LOGGER_APP_NAME)
+    _logger = logging.getLogger(name=app_name if app_name else LOGGER_APP_NAME)
     _logger.setLevel(logging.INFO)
     
     if get_env_var('ENV', compulsory=True) == 'LOCAL':
