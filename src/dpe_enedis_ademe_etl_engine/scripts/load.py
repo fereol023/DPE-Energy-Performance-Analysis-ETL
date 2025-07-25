@@ -2,25 +2,19 @@ import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 import pandas as pd
+
+from prefect import flow, task, get_run_logger
+from prefect.task_runners import ConcurrentTaskRunner
+from prefect.blocks.system import Secret
+from prefect.artifacts import create_markdown_artifact
+from prefect.server.schemas.schedules import CronSchedule
+from prefect.cache_policies import NO_CACHE
+
 from ..utils import decorator_logger, logger
 from ..scripts.filestorage_helper import FileStorageConnexion
 from ..utils.fonctions import get_env_var
 
-@decorator_logger
-def push_to_api(self, df=None, table_name="", config_api_server={}):
-    """
-    Envoie le DataFrame à l'endpoint de l'API.
-    :param df: Le DataFrame pandas à envoyer.
-    """
-    return 
-    # api_endpoint = f"{config_api_server['API_SERVER']}/{table_name}/insert"
-    # data = df.to_dict(orient='records')
-    # response = requests.post(api_endpoint, json=data) # must credentials + timeout
-    # response.raise_for_status()
-    # logger.info(f"Données envoyées avec succès à {api_endpoint}. Code de statut : {response.status_code}")
 
-
-######## # Load to db for ETL operations
 class DataEnedisAdemeLoader(FileStorageConnexion):
     """
     Classe pour charger les données dans la base de données.
@@ -56,6 +50,7 @@ class DataEnedisAdemeLoader(FileStorageConnexion):
 
 
     @decorator_logger
+    @task(name="load-save-tables-to-db", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def save_one_table(self, df, table_name=""):
         """
         Envoie un DataFrame à une table spécifique dans la base de données.
@@ -68,7 +63,7 @@ class DataEnedisAdemeLoader(FileStorageConnexion):
         pd.dataframe.to_sql() ne fonctionne pas avec postgres.
         on utilise un engine sqlalchemy pour se connecter à la bdd.
         """
-
+        logger = get_run_logger()
         # ------- Vérification des paramètres
         if (self.db_connection is None) and (self.engine is None):
             raise ValueError("La connexion à la base de données est requise/engine est requis.")
@@ -118,11 +113,14 @@ class DataEnedisAdemeLoader(FileStorageConnexion):
             raise
 
     @decorator_logger
+    @flow(name="ETL data loading pipeline", 
+      description="Pipeline de chargement orchestré avec Prefect")
     def run(self):
         """
         Envoie les données dans la bdd
         Ordre upload, car les tables sont liées entre elles par des clés étrangères.
         """
+        logger = get_run_logger()
         ## Ordre 
         self.save_one_table(
             df=self.df_logements.drop_duplicates(subset=self.bdd_pk_mapping.get("logements", []), keep='first'), 

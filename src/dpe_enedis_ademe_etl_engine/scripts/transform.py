@@ -4,6 +4,13 @@ import datetime
 import numpy as np
 import pandas as pd
 
+from prefect import flow, task, get_run_logger
+from prefect.task_runners import ConcurrentTaskRunner
+from prefect.blocks.system import Secret
+from prefect.artifacts import create_markdown_artifact
+from prefect.server.schemas.schedules import CronSchedule
+from prefect.cache_policies import NO_CACHE
+
 from ..utils.fonctions import (
     normalize_colnames_list, 
     normalize_df_colnames, 
@@ -47,6 +54,7 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
         self.cols_filled = {"mean": [], "median": []} # cols ou les nan auront été remplis
 
     @decorator_logger
+    @task(name="transform-auto-cast-object-variables", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def auto_cast_object_columns(self):
         """
         Automatic casting for object columns.
@@ -67,6 +75,7 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
         return self
     
     @decorator_logger
+    @task(name="transform-imputation-with-float-variables", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def fillnan_float_dtypes(self):
         """
         Il est conseillé de faire un fillna par la médiane 
@@ -107,6 +116,7 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
         return re.sub(r'\D', '', str(x))
 
     @decorator_logger
+    @task(name="transform-compute-arrondissement", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def compute_arrondissement(self):
         try:
             if "district_enedis_with_ban" not in self.df.columns:
@@ -119,6 +129,7 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
             return self
     
     @decorator_logger
+    @task(name="transform-compute-conso-per-kwh", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def compute_target(self):
         target = normalize_colnames_list(["Consommation annuelle moyenne par logement de l'adresse (MWh)_enedis_with_ban"])[0]
         new_target = target.replace('mwh', 'kwh')
@@ -153,6 +164,7 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
         return cols_config.get(key).get("cols", {}).get(colname, {}).get("default", "N/C")
 
     @decorator_logger
+    @task(name="transform-select-and-split-per-entities", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def select_and_split(self, only_required_columns: bool=False):
         """Selection des colonnes et split en 3 tables : adresses, logements, consommations"""
 
@@ -175,6 +187,7 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
         return self
     
     @decorator_logger
+    @task(name="transform-cast-variables-with-types", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def apply_schema_to_df(self, data_schema: dict) -> pd.DataFrame:
         """
         Applique le schéma de données à un DataFrame.
@@ -194,6 +207,7 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
         return self
     
     @decorator_logger
+    @task(name="transform-save-tables-files", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def save_all(self):
         """Save the transformed data to parquet files in gold zone."""
         for n,d in [
@@ -207,9 +221,11 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
             )
 
     @decorator_logger
+    @flow(name="ETL data transformation pipeline", 
+      description="Pipeline de nettoyage orchestré avec Prefect")
     def run(
         self, 
-        types_schema_fpath: str=None, 
+        types_schema_fpath: str="", 
         keep_only_required: bool=False,
     ):
         # étapes de transformation 

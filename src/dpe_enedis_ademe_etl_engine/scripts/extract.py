@@ -1,10 +1,23 @@
 import os
+import time
+import httpx
 import requests
 import functools 
 import threading
 import numpy as np 
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
+
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List, Callable, Any, Optional
+
+from prefect import flow, task, get_run_logger
+from prefect.task_runners import ConcurrentTaskRunner
+from prefect.blocks.system import Secret
+from prefect.artifacts import create_markdown_artifact
+from prefect.server.schemas.schedules import CronSchedule
+from prefect.cache_policies import NO_CACHE
 
 from ..scripts.filestorage_helper import FileStorageConnexion
 from ..utils import logger, decorator_logger
@@ -13,6 +26,35 @@ from ..utils.fonctions import (
     get_today_date, 
     normalize_df_colnames
 )
+
+class RateLimiter:
+    """Thread-safe rate limiter"""
+    def __init__(self, rate_limit: int):
+        self.rate_limit = rate_limit
+        self.requests_made = 0
+        self.last_reset = time.time()
+        self.lock = threading.Lock()
+    
+    def acquire(self):
+        """Acquire permission to make a request, blocking if rate limit exceeded"""
+        with self.lock:
+            current_time = time.time()
+            
+            # Reset counter if more than 1 second has passed
+            if current_time - self.last_reset >= 1.0:
+                self.requests_made = 0
+                self.last_reset = current_time
+            
+            # If we've hit the rate limit, wait until next second
+            if self.requests_made >= self.rate_limit:
+                sleep_time = 1.0 - (current_time - self.last_reset)
+                if sleep_time > 0:
+                    time.sleep(sleep_time + 1)
+                # Reset after waiting
+                self.requests_made = 0
+                self.last_reset = time.time()
+            
+            self.requests_made += 1
 
 
 class DataEnedisAdemeExtractor(FileStorageConnexion):
@@ -36,7 +78,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         self.output = pd.DataFrame()
         self.ban_data = pd.DataFrame()
         self.ademe_data = pd.DataFrame()
-        self.PATH_FILE_INPUT_ENEDIS_CSV = get_env_var('PATH_FILE_INPUT_ENEDIS_CSV', compulsory=True, default_value="")
+        self.PATH_FILE_INPUT_ENEDIS_CSV = get_env_var('PATH_FILE_INPUT_ENEDIS_CSV', compulsory=True)
         # --- objet debugger ---
         self.debug = debug
         if self.debug: self.debugger = {} 
@@ -45,10 +87,14 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         self.get_url_enedis_year_rows = lambda annee, rows: f"https://data.enedis.fr/api/explore/v2.1/catalog/datasets/consommation-annuelle-residentielle-par-adresse/records?where=annee%20%3D%20date'{annee}'&limit={rows}"
         # generer une url pour requeter l'api de la ban à partir d'une adresse
         self.get_url_ademe_filter_on_ban = lambda key: f"https://data.ademe.fr/data-fair/api/v1/datasets/dpe-v2-logements-existants/lines?size=1000&format=json&qs=Identifiant__BAN%3A{key}"
-        self.get_url_ademe_filter_on_ban = lambda key: f"https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?q_fields=identifiant_ban&q={key}"
+        self.get_url_ademe_filter_on_ban = lambda key: f"https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?q_fields=identifiant_ban&q={key}" # update 19 juillet 2025
         # generer une url pour requeter l'api de la ban à partir d'une adresse
         self.get_url_ban_filter_on_adresse = lambda key: f"https://api-adresse.data.gouv.fr/search/?q={key}&limit=1"
+        self.get_url_ban_filter_on_adresse = lambda addr: f"https://data.geopf.fr/geocodage/search?q={addr}&limit=1" # adresse est complete car obtenue par concat dans enedis (update 23 juillet 2025)
+        self.meta = "" # suffix files 
 
+    @decorator_logger
+    @task(name="extract-input-df-from-PATH_FILE_INPUT_ENEDIS_CSV", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def load_batch_input(self):
         """
         Load csv data from conso input file. 
@@ -63,12 +109,14 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         If the input CSV file is not valid or does not contain the required columns,
         it will raise an AssertionError.
         """
+        logger = get_run_logger()
+
         def load_enedis_input_from_local_csv():
             self.input = pd.read_csv(self.PATH_FILE_INPUT_ENEDIS_CSV, sep=';')
                      
         def load_enedis_input_from_s3_csv():
-            self.input = pd.DataFrame(
-                self.client.get_object(self.BUCKET_NAME, self.PATH_FILE_INPUT_ENEDIS_CSV)            
+            self.input = pd.read_csv(
+                self.client.get_object(self.BUCKET_NAME, self.PATH_FILE_INPUT_ENEDIS_CSV), sep=';'            
                 )
         
         try:
@@ -76,16 +124,6 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
                 load_enedis_input_from_local_csv()
             else:
                 load_enedis_input_from_s3_csv()
-            assert self.input.shape[0] > 0, f"Erreur dans le chargement du fichier CSV input : {self.PATH_FILE_INPUT_ENEDIS_CSV}"
-            self.input = self.input.rename(
-                            columns={
-                                'Adresse': 'adresse', 
-                                'Nom Commune': 'nom_commune', 
-                                'Code Commune': 'code_commune'
-                            })
-            # validate schama with input required cols
-            #assert all(col in self.input.columns for col in ['adresse', 'nom_commune', 'code_commune']),\
-            #       f"Erreur dans le chargement du fichier CSV input : {self.PATH_FILE_INPUT_ENEDIS_CSV} - "
         except:
             logger.critical(f"Erreur dans le chargement du fichier CSV input : {self.PATH_FILE_INPUT_ENEDIS_CSV}")
             raise
@@ -104,7 +142,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         :param addr: The address to query the BAN API.
         :return: A dictionary with the BAN data for the given address.
         """
-        res = requests.get(self.get_url_ban_filter_on_adresse(addr))
+        res = requests.get(self.get_url_ban_filter_on_adresse(addr), timeout=60)
         if res.status_code == 200:
             j = res.json()
             if len(j.get('features')) > 0:
@@ -112,6 +150,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
                 lon, lat = first_result.get('geometry').get('coordinates')
                 first_result_all_infos = { **first_result.get('properties'), **{"lon": lon, "lat": lat}, **{'full_adress': addr}}
                 first_result_all_infos = { **first_result_all_infos, **{"thread_name": threading.current_thread().name}}
+                time.sleep(1) # limite 50 appels/sec - stratégie : 1 thread attend 1 sec
                 return first_result_all_infos
             else:
                 return
@@ -125,7 +164,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         :param id_ban: The id_ban to query the Ademe API.
         :return: A dictionary with the Ademe data for the given id_ban.
         """
-        res = requests.get(self.get_url_ademe_filter_on_ban(id_ban))
+        res = requests.get(self.get_url_ademe_filter_on_ban(id_ban), timeout=90)
         if res.status_code == 200:
             j = res.json()
             if j.get('results'):
@@ -161,8 +200,140 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         workers.shutdown()
         return res
 
+    def multithreaded_api_request(
+        self,
+        num_threads: int,
+        api_call_func: Callable[[Any], Any],
+        obj_list: List[Any],
+        rate_limit: int,
+        timeout: Optional[float] = None
+    ) -> List[Any]:
+        """
+        Make multithreaded API requests with rate limiting.
+        Args:
+            num_threads: Number of threads to use
+            api_call_func: Function that takes an object from obj_list and returns API response
+            obj_list: List of objects to process
+            rate_limit: Maximum number of requests per second
+            timeout: Optional timeout for each request in seconds
+        
+        Returns:
+            List of results from API calls (same order as input list)
+        
+        Example:
+            def my_api_call(item):
+                response = requests.get(f"https://api.example.com/data/{item['id']}")
+                return response.json()
+            
+            items = [{'id': 1}, {'id': 2}, {'id': 3}]
+            results = multithreaded_api_request(
+                num_threads=3,
+                api_call_func=my_api_call,
+                obj_list=items,
+                rate_limit=10
+            )
+        """
+        if not obj_list:
+            return []
+        
+        # Initialize rate limiter and results storage
+        rate_limiter = RateLimiter(rate_limit)
+        results = [None] * len(obj_list)
+        errors = []
+        
+        def worker(index: int, obj: Any) -> tuple:
+            """Worker function for each thread"""
+            try:
+                # Acquire rate limit permission
+                rate_limiter.acquire()
+                # Make the API call
+                if timeout:
+                    # You might want to implement timeout handling in your api_call_func
+                    result = api_call_func(obj)
+                else:
+                    result = api_call_func(obj)    
+                return index, result, None
+            except Exception as e:
+                if "Max retries exceeded" in str(e):
+                    time.sleep(30) # nombre de secondes bloquées non communiquées
+                    try:
+                        rate_limiter.acquire()
+                        result = api_call_func(obj)
+                        return index, result, None
+                    except Exception as e:
+                        return index, None, e
+                else:
+                    return index, result, None
+
+        
+        # Use ThreadPoolExecutor for better thread management
+        with ThreadPoolExecutor(max_workers=num_threads) as executor:
+            # Submit all tasks
+            future_to_index = {
+                executor.submit(worker, i, obj): i 
+                for i, obj in enumerate(obj_list)
+            }
+            # Collect results as they complete
+            for future in as_completed(future_to_index):
+                index, result, error = future.result()
+                if error:
+                    errors.append((index, error))
+                    if self.debug: print(f"Error processing item {index}: {error}")
+                else:
+                    results[index] = result
+        
+        # Print summary
+        successful = len([r for r in results if r is not None])
+        if self.debug: print(f"Completed {successful}/{len(obj_list)} requests successfully")
+        
+        if errors and self.debug:
+            print(f"Encountered {len(errors)} errors")
+            for index, error in errors[:5]:  # Show first 5 errors
+                print(f"  Item {index}: {type(error).__name__}: {error}")
+            if len(errors) > 5:
+                print(f"  ... and {len(errors) - 5} more errors")
+        
+        return results
+
+    # TACHE VALIDER SCHEMA INPUT
+    @decorator_logger
+    @task(name="validate-enedis-input-df-schema", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
+    def validate_schema_input(self):
+        logger = get_run_logger()
+        try:
+            cols = self.input.columns
+            assert not self.input.empty, f"Erreur dans le chargement du fichier CSV input : {self.PATH_FILE_INPUT_ENEDIS_CSV}"
+            assert ('Adresse' in cols) or ('adresse' in cols), f"'Adresse' not in input columns : {cols}"
+            assert ('Nom Commune' in cols) or ('nom_commune' in cols), f"'Nom Commune' not in input columns : {cols}"
+            assert ('Code Commune' in cols) or ('code_commune' in cols), f"'Code Commune' not in input columns : {cols}"
+            assert ('Code IRIS' in cols) or ('code_iris' in cols), f"'Code IRIS' not in input columns : {cols}"
+            assert ('Code Département' in cols) or ('code_departement' in cols), f"'Code Département' not in input columns : {cols}"
+        except Exception as e:
+            logger.critical(f"Enedis schema validation failed with exception : {e}")
+
+    # TACHE AJOUTER LES COLONNES A ENEDIS
+    @decorator_logger
+    @task(name="compute-adress-columns-and-format", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
+    def add_enedis_columns(self):
+        self.input = self.input.rename(
+                        columns={
+                            'Adresse': 'adresse', 
+                            'Nom Commune': 'nom_commune', 
+                            'Code Commune': 'code_commune',
+                            'Code IRIS': 'code_iris',
+                            'Code Département': 'code_departement'
+                        })
+        # validate schama with input required cols
+        #assert all(col in self.input.columns for col in ['adresse', 'nom_commune', 'code_commune']),\
+        #       f"Erreur dans le chargement du fichier CSV input : {self.PATH_FILE_INPUT_ENEDIS_CSV} - "
+        self.input['code_departement'] = self.input['code_iris'].apply(lambda r: int(r[:2]))
+        self.input['code_commune'] = self.input['code_commune'].astype('str')
+        self.input['nom_commune'] = self.input['nom_commune'].astype('str')
+        self.input['full_adress'] = self.input['adresse'] + ' ' + self.input['code_commune'] + ' ' + self.input['nom_commune']
+
     # TACHE EXTRACTION 1
     @decorator_logger
+    @task(name="extract-data-from-enedis-api", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def get_enedis_data(
         self, 
         from_input:bool=False, 
@@ -179,16 +350,15 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         :param rows: Number of rows to extract from the Enedis API.
         :return: self, with self.input containing the Enedis data.
         """
-        def add_full_adress_col(df):
-            df['full_adress'] = df['adresse'] + ' ' + df['code_commune'] + ' ' + df['nom_commune']
-            return df
+        logger = get_run_logger()
 
+        if self.debug: print("-> get_enedis_data")
         if from_input:
             self.load_batch_input()
             if self.debug: self.debugger.update({'source_enedis': "input csv"})
             if code_departement: # filter sur le code département dans le df input
-                logger.info(f"Filtering input data on code département : {code_departement}")
-                self.input = self.input[self.input['Code Département']==code_departement]
+                self.input = self.input[self.input['code_departement']==code_departement]
+                logger.info(f"Filtering input data on code département : {code_departement} ({self.input.shape[0]} rows, {self.input.shape[1]} columns)")
         else:
             requete_url_enedis = self.get_url_enedis_year_rows(annee, rows)
             if code_departement: # filter sur le code département dans l'url
@@ -196,34 +366,47 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
             self.input = self.get_dataframe_from_url(requete_url_enedis)
             logger.info(f"Extract input from url enedis :\n {requete_url_enedis}")
             if self.debug: self.debugger.update({'source_enedis': requete_url_enedis})
+        
+        logger.info(f"Shape of loaded dataframe : {self.input.shape} with cols {list(self.input.columns)}")
 
-        # enfin, reconstituer les adresses complètes
-        self.input = add_full_adress_col(self.input)
+        # valider le schema
+        self.validate_schema_input()
+        # enfin, reconstituer les adresses complètes et les autres champs
+        self.add_enedis_columns()
         return self
 
     # TACHE EXTRACTION 2
     @decorator_logger
-    def get_ban_data(self, n_threads=10):    
+    @task(name="extract-data-from-ban-api", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
+    def get_ban_data(self, n_threads):    
         """
         Extraire le dataframe de la BAN à partir d'une liste d'adresses.
         :param n_threads: Number of threads to use for querying the BAN API.
         :return: self, with self.ban_data containing the BAN data.
         :raises ValueError: If the input dataframe is empty.
         """
+        logger = get_run_logger()
         # tache 1 - prendre input enedis
         if self.input.empty:
             logger.critical("Erreur dans le chargement du fichier CSV input : pas de données")
             raise ValueError("Pas de données dans le dataframe")
 
         # tache 2 - constituer les adresses enedis
-        enedis_adresses_list = self.input.full_adress.values.tolist()
+        enedis_adresses_list = list(set(self.input.full_adress.values.tolist()))
+        if self.debug: print(f"-> get_ban_data : {len(enedis_adresses_list)}")
 
         # tache 3 - requeter l'api de la BAN sur les adresses enedis avec n_threads
-        self.ban_data = self.request_api_multithreaded(
-                api_call_func=self.call_ban_api_individually,
-                obj_list=enedis_adresses_list,
-                n_threads=n_threads
-            )
+        # self.ban_data = self.request_api_multithreaded(
+        #         api_call_func=self.call_ban_api_individually,
+        #         obj_list=enedis_adresses_list,
+        #         n_threads=n_threads
+        #     )
+        self.ban_data = self.multithreaded_api_request(
+            num_threads=n_threads,
+            api_call_func=self.call_ban_api_individually,
+            obj_list=enedis_adresses_list,
+            rate_limit=30 # 50 en vrai d'après la doc
+        )
         # tache 4 - filtrer les adresses valides
         self.ban_data = list(filter(lambda x: x is not None, self.ban_data))
         if not self.ban_data:
@@ -241,6 +424,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
 
     # TACHE EXTRACTION 3
     @decorator_logger
+    @task(name="extract-data-from-ademe-api", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def get_ademe_data(self, n_threads):
         """
         Extraire la data de l'ademe au complet en utilisant 
@@ -250,14 +434,20 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         - sur la base des Identifiants BAN de enedis, aller chercher les logements mappés sur ces codes BAN
         - 1 id_ban = * adresses (entre 10 et 1_000) - en effet, les données enedis sont agrégées
         """
+        logger = get_run_logger()
+        if self.debug: print("-> get_ademe_data")
         ademe_data = []
         # ? multithreading -> limite les requetes en parallele - renvoie 0 resultats si trop de requetes en parallele
-        ademe_data_res = [requests.get(self.get_url_ademe_filter_on_ban(_id)).json().get('results')\
-                          for _id in self.id_BAN_list] 
-        # ademe_data_res = self.request_api_multithreaded(
+        ademe_data_res = []
+        for _id in self.id_BAN_list:
+            ademe_data_res.append(requests.get(self.get_url_ademe_filter_on_ban(_id), timeout=90).json().get('results'))
+            time.sleep(0.5) # 600 req/secondes = 0,001s pour 1 req => on y va 2000 fois plus lentement que le rate limiteur
+
+        # ademe_data_res = self.multithreaded_api_request(
+        #     num_threads=n_threads,
         #     api_call_func=self.call_ademe_api_individually,
         #     obj_list=self.id_BAN_list,
-        #     n_threads=n_threads
+        #     rate_limit=300 # 600 en vrai d'après la doc
         # )
         # suppr les None
         ademe_data_res = list(filter(lambda x: x is not None, ademe_data_res))
@@ -284,11 +474,14 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
 
     # TACHE MERGE 1 
     @decorator_logger
+    @task(name="join-enedis-data-with-ban-data", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def merge_and_save_enedis_with_ban_as_output(self): 
         """obtenir le df pandas des données enedis (requete) + les données de la BAN pour les adresses trouvées."""
         # note : si une adresse est pas  trouvée on tej la data enedis (cf. inner join)
         # merge enedis avec ban
         # ? - free memory
+        logger = get_run_logger()
+        if self.debug: print("-> merge_and_save_enedis_with_ban_as_output")
         self.input = self.input.add_suffix('_enedis')
         self.ban_data = self.ban_data.add_suffix('_ban')
         self.output = pd.merge(
@@ -312,11 +505,13 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
 
     # TACHE MERGE 2 (final)
     @decorator_logger
+    @task(name="join-all-and-backup", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def merge_all_as_output(self):
         """
         Merge all dataframes to get the final dataframe.
-
         """
+        logger = get_run_logger()
+        if self.debug: print("-> get_ademe_data")
         # reconstituer le dataframe complet
         enedis_with_ban_data = self.load_parquet_file(
             dir=self.PATH_DATA_BRONZE,
@@ -342,14 +537,16 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         self.save_parquet_file(
             df=self.output,
             dir=self.PATH_DATA_SILVER,
-            fname=f"extract_output_data_{get_today_date()}.parquet"
+            fname=f"extract_output_data_{get_today_date()}_{self.meta}.parquet"
         )
         if self.debug: self.debugger.update({'sample_output': self.output.tail(5)})
 
     @decorator_logger
+    @flow(name="ETL data extraction pipeline", 
+      description="Pipeline de collecte orchestré avec Prefect")
     def extract(self, 
         from_input:bool=False, 
-        input_csv_path:str=None,
+        input_csv_path:str="",
         code_departement:int=75, 
         annee:int=2022, 
         rows:int=10, 
@@ -387,6 +584,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
                 default_value=input_csv_path, 
                 compulsory=True
             )
+        self.meta = f"from_input_{str(from_input)}_dept_{str(code_departement)}_year_{str(annee)}"
         self.get_enedis_data(from_input, code_departement, annee, rows)\
             .get_ban_data(n_threads_for_querying)\
             .merge_and_save_enedis_with_ban_as_output()\
