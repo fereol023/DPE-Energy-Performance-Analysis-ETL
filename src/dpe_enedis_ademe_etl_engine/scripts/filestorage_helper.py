@@ -26,6 +26,7 @@ class FileStorageConnexion(Paths):
         super().__init__()
         self.__set_client()
         self.get_today_date = get_today_date
+        self.batch_id = get_env_var('BATCH_CORRELATION_ID', compulsory=True, cast_to_type=str)
 
     def __set_client(self):
         try:

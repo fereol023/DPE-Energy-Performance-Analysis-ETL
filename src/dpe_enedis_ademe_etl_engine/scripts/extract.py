@@ -132,7 +132,11 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
     def get_dataframe_from_url(self, url):
         """Extract pandas dataframe from any valid url."""
         logger.info(f"Fetching data from : {url}")
-        res = requests.get(url).json().get('results')
+        res = requests.get(url)
+        if res.status_code != 200:
+            logger.critical(f"Error fetching data from {url} - Status code: {res.status_code} - Status message: {res.text}")
+            raise ValueError(f"Error fetching data from {url} - Status code: {res.status_code} - Status message: {res.text}")
+        res = res.json().get('results')
         return pd.DataFrame(res)
 
     @functools.lru_cache(maxsize=128)
@@ -337,8 +341,8 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
     def get_enedis_data(
         self, 
         from_input:bool=False, 
-        code_departement:int=75, 
-        annee:int=2022, 
+        code_departement:int=-1, 
+        annee:int=2023, 
         rows:int=10
     ):
         """
@@ -356,13 +360,14 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         if from_input:
             self.load_batch_input()
             if self.debug: self.debugger.update({'source_enedis': "input csv"})
-            if code_departement: # filter sur le code département dans le df input
+            if code_departement>0: # filter sur le code département dans le df input
                 self.input = self.input[self.input['code_departement']==code_departement]
                 logger.info(f"Filtering input data on code département : {code_departement} ({self.input.shape[0]} rows, {self.input.shape[1]} columns)")
         else:
             requete_url_enedis = self.get_url_enedis_year_rows(annee, rows)
-            if code_departement: # filter sur le code département dans l'url
-                requete_url_enedis += f"&where=code_departement%20%3D%20{code_departement}"
+            if code_departement>0: # filter sur le code département dans l'url
+                # requete_url_enedis += f"&where=code_departement%20%3D%20{code_departement}"
+                requete_url_enedis += f"&code_departement%3D{code_departement}"
             self.input = self.get_dataframe_from_url(requete_url_enedis)
             logger.info(f"Extract input from url enedis :\n {requete_url_enedis}")
             if self.debug: self.debugger.update({'source_enedis': requete_url_enedis})
@@ -534,10 +539,11 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
                             right_on='id_BAN').drop_duplicates().reset_index(drop=True)
         # normaliser les noms de colonnes et trier les colonnes
         self.output = normalize_df_colnames(self.output)
+        self.output = self.output.assign(batch_id=self.batch_id)
         self.save_parquet_file(
             df=self.output,
             dir=self.PATH_DATA_SILVER,
-            fname=f"extract_output_data_{get_today_date()}_{self.meta}.parquet"
+            fname=f"extraction_{get_today_date()}_{self.meta}.parquet"
         )
         if self.debug: self.debugger.update({'sample_output': self.output.tail(5)})
 
@@ -547,8 +553,8 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
     def extract(self, 
         from_input:bool=False, 
         input_csv_path:str="",
-        code_departement:int=75, 
-        annee:int=2022, 
+        code_departement:int=-1, 
+        annee:int=2023, 
         rows:int=10, 
         n_threads_for_querying:int=10,
         save_schema:bool=True
@@ -556,6 +562,12 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         """
         Run the extraction process.
         
+        1. If from_input is True, it will load the input CSV file.
+        2. If from_input is False, it will extract data from the Enedis API.
+        3. It will then extract BAN data based on the input data.
+        4. Finally, it will extract Ademe data based on the BAN data and merge all dataframes.
+        5. The final output will be saved in a parquet file and the schema will be saved if save_schema is True.
+
         :param from_input: If True, use the input CSV file. If False, use the Enedis API.
         :param input_csv_path: Path to the input CSV file if from_input is True.
         :param code_departement: Code of the department to filter the data.
@@ -564,19 +576,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         :param n_threads_for_querying: Number of threads to use for querying the BAN API.
         :param save_schema: If True, save the schema of the output dataframe.
         
-        :raises ValueError: If compulsory environment variables are not set.
-        :raises Exception: If there is an error during the extraction process.
-        :raises AssertionError: If the input CSV file is not valid or does not contain the required columns.
-        :raises KeyError: If the schema file does not contain the required key.
-        :raises TypeError: If the input data is not a pandas DataFrame.
-        
         :return: None
-        
-        1. If from_input is True, it will load the input CSV file.
-        2. If from_input is False, it will extract data from the Enedis API.
-        3. It will then extract BAN data based on the input data.
-        4. Finally, it will extract Ademe data based on the BAN data and merge all dataframes.
-        5. The final output will be saved in a parquet file and the
         """
         if from_input:
             self.PATH_FILE_INPUT_ENEDIS_CSV = get_env_var(
@@ -584,7 +584,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
                 default_value=input_csv_path, 
                 compulsory=True
             )
-        self.meta = f"from_input_{str(from_input)}_dept_{str(code_departement)}_year_{str(annee)}"
+        self.meta = f"from_input_{str(from_input)}_dept_{str(code_departement)}_year_{str(annee)}_{self.batch_id}"
         self.get_enedis_data(from_input, code_departement, annee, rows)\
             .get_ban_data(n_threads_for_querying)\
             .merge_and_save_enedis_with_ban_as_output()\
