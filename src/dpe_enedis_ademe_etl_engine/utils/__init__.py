@@ -16,7 +16,7 @@ ELASTICSEARCH_HOST = get_env_var('ELASTICSEARCH_HOST', compulsory=True)
 ELASTICSEARCH_PORT = get_env_var('ELASTICSEARCH_PORT', compulsory=True, cast_to_type=int)
 ELASTICSEARCH_INDEX = get_env_var('ELASTICSEARCH_INDEX', compulsory=True)
 LOGGER_APP_NAME = get_env_var('ETL_LOGGER_APP_NAME', default_value='dpe_ETL_engine_logger', compulsory=True)
-SESSION_CORRELATION_ID = get_env_var('SESSION_CORRELATION_ID', default_value=str(uuid.uuid4()), compulsory=True)
+BATCH_CORRELATION_ID = get_env_var('BATCH_CORRELATION_ID', compulsory=True)
 
 
 def get_custom_logger_dict():
@@ -160,7 +160,7 @@ def decorator_logger(func, logger=get_async_elk_logger()):
             log_entry["details"]["message"] = str(e)
         finally:
             log_entry["duration_ms"] = round((datetime.datetime.now() - s).total_seconds() * 1_000, 3)
-            log_entry["correlation_id"] = SESSION_CORRELATION_ID
+            log_entry["correlation_id"] = BATCH_CORRELATION_ID
             log_entry["app_name"] = LOGGER_APP_NAME
             if log_entry["status"] == "fail":
                 log_entry["severity"] = "CRITICAL"

@@ -47,10 +47,17 @@ def load_data_task():
 @decorator_logger
 @flow(name="ETL Enedis Ademe", log_prints=False)
 def dpe_enedis_ademe_etl_flow(annee, code_departement, batch_size):
-    data_bronze = extract_data_task(annee=annee, code_departement=code_departement, rows=batch_size)
-    transform_data_task(data_bronze)
+    data_silver = extract_data_task(annee=annee, code_departement=code_departement, rows=batch_size)
+    transform_data_task(data_silver)
     load_data_task()
 
 if __name__=="__main__":
     # orchestration
-    dpe_enedis_ademe_etl_flow()
+    dpe_enedis_ademe_etl_flow.serve(
+        name="deployment-etl-enedis-ademe",
+        tags=["rncp", "dpe", "enedis", "ademe"],
+        parameters={"annee": 2023, "code_departement": 95, "batch_size": 90},
+        cron="0 9 * * WED"
+    ) 
+
+
