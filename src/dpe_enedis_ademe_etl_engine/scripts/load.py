@@ -137,7 +137,7 @@ class DataEnedisAdemeLoader(FileStorageConnexion):
                     if self.debug: logger.info(f"Clés existantes dans la table {table_name}: ({len(exiting_keys.tolist())}) : {exiting_keys.tolist()}.")
                     df = df[~df[key_cols[0]].isin(exiting_keys)]
                     logger.info(f"Nombre de lignes après suppression des observations déjà enregistées: {len(df)}.")
-                    if self.debug: logger.info(f"Nouvelles clés à insérer dans la table {table_name}: {df[key_cols[0]].unique().tolist()}.")
+                    if self.debug: logger.info(f"Nouvelles clés à insérer dans la table {table_name}: {df[key_cols[0]].unique().tolist()} : {df.to_dict(orient='records')}.")
                 else:
                     logger.info(f"Utilisation des colonnes clés primaires {key_cols} pour la déduplication dans la table {table_name}.")
                     # récuperer les clés déjà existantes dans la table
