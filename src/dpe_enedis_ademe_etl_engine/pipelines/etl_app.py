@@ -1,8 +1,3 @@
-import os
-for key, value in dict_config.items():
-    os.environ[key] = value
-
-
 try:
     from ..scripts import extract, transform, load
     from ..utils.fonctions import get_env_var
