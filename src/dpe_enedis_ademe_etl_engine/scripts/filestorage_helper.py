@@ -8,12 +8,25 @@ from io import BytesIO
 from minio import Minio 
 from pyarrow import Table, parquet as pq
 
-from ..scripts import Paths
-from ..utils import logger, decorator_logger
-from ..utils.fonctions import (
-    get_env_var,
-    get_today_date, 
-)
+try:
+    from ..scripts import Paths
+    from ..utils import logger, decorator_logger
+    from ..utils.fonctions import (
+        get_env_var,
+        get_today_date, 
+    )
+except ImportError:
+    import sys
+    from pathlib import Path
+    current_dir = Path(__file__).resolve().parent
+    parent_dir = current_dir.parent
+    sys.path.append(str(parent_dir))
+    from scripts import Paths
+    from utils import logger, decorator_logger
+    from utils.fonctions import (
+        get_env_var,
+        get_today_date, 
+    )
 
 
 class FileStorageConnexion(Paths):

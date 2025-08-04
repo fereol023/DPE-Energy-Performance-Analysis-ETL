@@ -9,7 +9,15 @@ from functools import wraps
 from elasticsearch import Elasticsearch
 from concurrent.futures import ThreadPoolExecutor
 
-from ..utils.fonctions import get_env_var, get_today_date
+try:
+    from ..utils.fonctions import get_env_var, get_today_date
+except ImportError:
+    import sys
+    from pathlib import Path
+    current_dir = Path(__file__).resolve().parent
+    parent_dir = current_dir.parent
+    sys.path.append(str(parent_dir))
+    from utils.fonctions import get_env_var, get_today_date
 
 # configuration for Elasticsearch
 ELASTICSEARCH_HOST = get_env_var('ELASTICSEARCH_HOST', compulsory=True)

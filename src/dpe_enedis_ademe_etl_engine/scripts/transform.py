@@ -12,18 +12,37 @@ from prefect.artifacts import create_markdown_artifact
 from prefect.server.schemas.schedules import CronSchedule
 from prefect.cache_policies import NO_CACHE
 
-from ..utils.fonctions import (
-    normalize_colnames_list, 
-    normalize_df_colnames, 
-    get_today_date,
-    load_json
-    )
-from ..utils import (
-    logger, 
-    decorator_logger
-    )
-from ..scripts.filestorage_helper import FileStorageConnexion
-from ..utils.fonctions import get_env_var
+try:
+    from ..utils.fonctions import (
+        normalize_colnames_list, 
+        normalize_df_colnames, 
+        get_today_date,
+        load_json
+        )
+    from ..utils import (
+        logger, 
+        decorator_logger
+        )
+    from ..scripts.filestorage_helper import FileStorageConnexion
+    from ..utils.fonctions import get_env_var
+except ImportError:
+    import sys
+    from pathlib import Path
+    current_dir = Path(__file__).resolve().parent
+    parent_dir = current_dir.parent
+    sys.path.append(str(parent_dir))
+    from utils.fonctions import (
+        normalize_colnames_list, 
+        normalize_df_colnames, 
+        get_today_date,
+        load_json
+        )
+    from utils import (
+        logger, 
+        decorator_logger
+        )
+    from scripts.filestorage_helper import FileStorageConnexion
+    from utils.fonctions import get_env_var
 
 from scipy.stats import ttest_rel, wilcoxon
 
