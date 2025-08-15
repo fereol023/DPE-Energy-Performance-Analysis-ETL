@@ -73,7 +73,7 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
         # update ces valeurs plus tard
         self.cols_adresses = [] 
         self.cols_logements = []
-        self.golden_data_config_fpath = get_env_var(
+        self.golden_data_config_fpath = golden_data_config_fpath if golden_data_config_fpath else get_env_var(
             'SCHEMA_GOLDEN_DATA_FILEPATH', 
             default_value=golden_data_config_fpath,
             compulsory=True

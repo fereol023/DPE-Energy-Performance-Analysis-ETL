@@ -20,11 +20,11 @@ except ImportError:
     from utils.fonctions import get_env_var, get_today_date
 
 # configuration for Elasticsearch
-ELASTICSEARCH_HOST = get_env_var('ELASTICSEARCH_HOST', compulsory=True)
-ELASTICSEARCH_PORT = get_env_var('ELASTICSEARCH_PORT', compulsory=True, cast_to_type=int)
-ELASTICSEARCH_INDEX = get_env_var('ELASTICSEARCH_INDEX', compulsory=True)
+# ELASTICSEARCH_HOST = get_env_var('ELASTICSEARCH_HOST', compulsory=True)
+# ELASTICSEARCH_PORT = get_env_var('ELASTICSEARCH_PORT', compulsory=True, cast_to_type=int)
+# ELASTICSEARCH_INDEX = get_env_var('ELASTICSEARCH_INDEX', compulsory=True)
 LOGGER_APP_NAME = get_env_var('ETL_LOGGER_APP_NAME', default_value='dpe_ETL_engine_logger', compulsory=True)
-BATCH_CORRELATION_ID = get_env_var('BATCH_CORRELATION_ID', compulsory=True)
+BATCH_CORRELATION_ID = get_env_var('BATCH_CORRELATION_ID', default_value="000000000", compulsory=True)
 
 
 def get_custom_logger_dict():
@@ -50,68 +50,68 @@ def get_custom_logger_dict():
         }
     }
 
-class AsyncElasticSearchHandler(logging.Handler):
+# class AsyncElasticSearchHandler(logging.Handler):
 
-    def __init__(self, index: str='', max_workers: int=10):
-        """ LogRecords attributes :
-        ['args', 'created', 'exc_info', 'exc_text', 'filename', 'funcName', 
-        'getMessage', 'levelname', 'levelno', 'lineno', 'module', 'msecs', 
-        'msg', 'name', 'pathname', 'process', 'processName', 'relativeCreated', 
-        'stack_info', 'taskName', 'thread', 'threadName']
-        """
-        super().__init__()
-        self.es = Elasticsearch(f"http://{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}")
-        self.index = index
-        self.executor = ThreadPoolExecutor(max_workers=max_workers)
-        # init index if it does not exist
-        if not self.es.indices.exists(index=self.index):
-            self.es.indices.create(index=self.index, ignore=400)
-        if not self.es.ping():
-            raise ConnectionError(f"Could not connect to Elasticsearch at {ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}")
+#     def __init__(self, index: str='', max_workers: int=10):
+#         """ LogRecords attributes :
+#         ['args', 'created', 'exc_info', 'exc_text', 'filename', 'funcName', 
+#         'getMessage', 'levelname', 'levelno', 'lineno', 'module', 'msecs', 
+#         'msg', 'name', 'pathname', 'process', 'processName', 'relativeCreated', 
+#         'stack_info', 'taskName', 'thread', 'threadName']
+#         """
+#         super().__init__()
+#         self.es = Elasticsearch(f"http://{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}")
+#         self.index = index
+#         self.executor = ThreadPoolExecutor(max_workers=max_workers)
+#         # init index if it does not exist
+#         if not self.es.indices.exists(index=self.index):
+#             self.es.indices.create(index=self.index, ignore=400)
+#         if not self.es.ping():
+#             raise ConnectionError(f"Could not connect to Elasticsearch at {ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}")
 
-    def emit(self, record):
-        # override de emit pour envoyer sur le serveur elastic
-        # on fait dans des threads différents à chaque nouveau log qui arrive
-        self.executor.submit(self.log_to_elasticsearch, record)
+#     def emit(self, record):
+#         # override de emit pour envoyer sur le serveur elastic
+#         # on fait dans des threads différents à chaque nouveau log qui arrive
+#         self.executor.submit(self.log_to_elasticsearch, record)
     
-    def parse_log(self, _log_entry: logging.LogRecord) -> dict[str, Union[str, float, int, datetime.datetime]]:
+#     def parse_log(self, _log_entry: logging.LogRecord) -> dict[str, Union[str, float, int, datetime.datetime]]:
 
-        parsed_log = get_custom_logger_dict().copy()
-        parsed_log["timestamp"] = datetime.datetime.now()
-        parsed_log["details"]["module"] = _log_entry.module
-        parsed_log["details"]["source"] = _log_entry.funcName # renvoie wrapper quand c'est un log
-        parsed_log["details"]["logger_name"] = _log_entry.name
-        parsed_log["severity"] = _log_entry.levelname
+#         parsed_log = get_custom_logger_dict().copy()
+#         parsed_log["timestamp"] = datetime.datetime.now()
+#         parsed_log["details"]["module"] = _log_entry.module
+#         parsed_log["details"]["source"] = _log_entry.funcName # renvoie wrapper quand c'est un log
+#         parsed_log["details"]["logger_name"] = _log_entry.name
+#         parsed_log["severity"] = _log_entry.levelname
         
-        try:
-            _log_msg = eval(_log_entry.getMessage()) 
-            # si c'est un str dict, retournera a dict sinon leve excep
-            parsed_log["status"] = _log_msg["status"]
-            parsed_log["app_name"] = _log_msg["app_name"]
-            parsed_log["timestamp"] = _log_msg["timestamp"]
-            parsed_log["function_name"] = _log_msg["function_name"]
-            parsed_log["duration_ms"] = _log_msg["duration_ms"]
-            parsed_log["correlation_id"] = _log_msg["correlation_id"]
-            parsed_log["details"]["message"] = _log_msg["details"]["message"]
-            return parsed_log
-        except:
-            try:
-                # le getMessage est un str simple dans ce cas
-                parsed_log["details"]["message"] = _log_entry.getMessage()
-                parsed_log["timestamp"] = datetime.datetime.fromtimestamp(_log_entry.created)
-            except:
-                raise
-        return parsed_log
+#         try:
+#             _log_msg = eval(_log_entry.getMessage()) 
+#             # si c'est un str dict, retournera a dict sinon leve excep
+#             parsed_log["status"] = _log_msg["status"]
+#             parsed_log["app_name"] = _log_msg["app_name"]
+#             parsed_log["timestamp"] = _log_msg["timestamp"]
+#             parsed_log["function_name"] = _log_msg["function_name"]
+#             parsed_log["duration_ms"] = _log_msg["duration_ms"]
+#             parsed_log["correlation_id"] = _log_msg["correlation_id"]
+#             parsed_log["details"]["message"] = _log_msg["details"]["message"]
+#             return parsed_log
+#         except:
+#             try:
+#                 # le getMessage est un str simple dans ce cas
+#                 parsed_log["details"]["message"] = _log_entry.getMessage()
+#                 parsed_log["timestamp"] = datetime.datetime.fromtimestamp(_log_entry.created)
+#             except:
+#                 raise
+#         return parsed_log
 
-    def log_to_elasticsearch(self, log_entry):
-        try:
-            self.es.index(
-                index=self.index, 
-                id=uuid.uuid4(), 
-                document=self.parse_log(log_entry) # type logRecord
-                )
-        except Exception as e:
-            print(f"Failed to log to Elasticsearch: {e}")
+#     def log_to_elasticsearch(self, log_entry):
+#         try:
+#             self.es.index(
+#                 index=self.index, 
+#                 id=uuid.uuid4(), 
+#                 document=self.parse_log(log_entry) # type logRecord
+#                 )
+#         except Exception as e:
+#             print(f"Failed to log to Elasticsearch: {e}")
 
 
 # config logger
@@ -125,15 +125,16 @@ def get_async_elk_logger(app_name=None) ->logging.Logger:
     _logger.setLevel(logging.INFO)
     
     if get_env_var('ENV', compulsory=True) == 'LOCAL':
-        log_dir = get_env_var("PATH_LOG_DIR", default_value=None, compulsory=False)
-        if log_dir:
-            os.makedirs(log_dir, exist_ok=True)
-            log_file = os.path.join(log_dir, f"run_{get_today_date()}.log")
-            _backup_handler = logging.FileHandler(log_file)
-        else:
-            _backup_handler = logging.StreamHandler(sys.stdout)
+        log_dir = None # get_env_var("PATH_LOG_DIR", default_value=None, compulsory=False)
+        # if log_dir is not None:
+        #     os.makedirs(log_dir, exist_ok=True)
+        #     log_file = os.path.join(log_dir, f"run_{get_today_date()}.log")
+        #     _backup_handler = logging.FileHandler(log_file)
+        # else:
+        _backup_handler = logging.StreamHandler(sys.stdout)
     else:
-        _backup_handler = AsyncElasticSearchHandler(index=ELASTICSEARCH_INDEX)
+        #_backup_handler = AsyncElasticSearchHandler(index=ELASTICSEARCH_INDEX)
+        _backup_handler = logging.StreamHandler(sys.stdout)
     
     _formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     _backup_handler.setFormatter(_formatter)

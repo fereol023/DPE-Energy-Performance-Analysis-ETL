@@ -15,9 +15,5 @@
     "S3_SECRET_KEY": "xxxxxx",
     "S3_BUCKET_NAME": "dpe-storage-v1",
     "S3_REGION": "eu-west",
-    "S3_ENDPOINT_URL": "host:9000",
-    
-    "ELASTICSEARCH_HOST": "host",
-    "ELASTICSEARCH_PORT": "9200",
-    "ELASTICSEARCH_INDEX": "test_pytest_idx"
+    "S3_ENDPOINT_URL": "host:9000"
 }

@@ -10,7 +10,7 @@ def test_fetch_api_enedis(extraction_pip, input_data_schema_cols):
     Rule : should return status code 200, even if data empty.
     Why : assert that API is still on.
     """
-    test_year, nb_rows = 2022, 3
+    test_year, nb_rows = 2023, 3
     test_url = extraction_pip.get_url_enedis_year_rows(annee=test_year, rows=nb_rows)
     api_res = httpx.get(test_url,)
     excp = f"""
@@ -54,9 +54,9 @@ def test_run_extract(
     ):
     extraction_pip.extract(
         from_input=False, 
-        input_csv_path=None,
+        input_csv_path="",
         code_departement=75, 
-        annee=2022, 
+        annee=2023, 
         rows=10, 
         n_threads_for_querying=10,
         save_schema=False

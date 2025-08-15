@@ -1,3 +1,4 @@
+api_config = None
 try:
     import os
     from pathlib import Path
