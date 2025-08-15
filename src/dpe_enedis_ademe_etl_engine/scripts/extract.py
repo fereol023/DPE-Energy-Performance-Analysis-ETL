@@ -374,9 +374,6 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         if from_input:
             self.load_batch_input()
             if self.debug: self.debugger.update({'source_enedis': "input csv"})
-            if code_departement>0: # filter sur le code département dans le df input
-                self.input = self.input[self.input['code_departement']==code_departement]
-                logger.info(f"Filtering input data on code département : {code_departement} ({self.input.shape[0]} rows, {self.input.shape[1]} columns)")
         else:
             requete_url_enedis = self.get_url_enedis_year_rows(annee, rows)
             if code_departement>0: # filter sur le code département dans l'url
@@ -386,12 +383,18 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
             logger.info(f"Extract input from url enedis :\n {requete_url_enedis}")
             if self.debug: self.debugger.update({'source_enedis': requete_url_enedis})
         
-        logger.info(f"Shape of loaded dataframe : {self.input.shape} with cols {list(self.input.columns)}")
+        logger.info(f"Shape of raw loaded dataframe : {self.input.shape} with cols {list(self.input.columns)}")
 
         # valider le schema
         self.validate_schema_input()
         # enfin, reconstituer les adresses complètes et les autres champs
         self.add_enedis_columns()
+        if (from_input) and (code_departement>0): # filter sur le code département dans le df input
+            self.input = self.input[self.input['code_departement']==code_departement]
+            if rows > 0: self.input = self.input.head(rows)
+            logger.info(f"Filtering input data on code département : {code_departement} ({self.input.shape[0]} rows, {self.input.shape[1]} columns)")
+        
+        logger.info(f"Shape of loaded dataframe : {self.input.shape} with cols {list(self.input.columns)}")
         return self
 
     # TACHE EXTRACTION 2
@@ -458,17 +461,14 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         ademe_data = []
         # ? multithreading -> limite les requetes en parallele - renvoie 0 resultats si trop de requetes en parallele
         ademe_data_res = []
+        k = 0
         for _id in self.id_BAN_list:
             ademe_data_res.append(requests.get(self.get_url_ademe_filter_on_ban(_id), timeout=90).json().get('results'))
-            time.sleep(0.5) # 600 req/secondes = 0,001s pour 1 req => on y va 2000 fois plus lentement que le rate limiteur
-
-        # ademe_data_res = self.multithreaded_api_request(
-        #     num_threads=n_threads,
-        #     api_call_func=self.call_ademe_api_individually,
-        #     obj_list=self.id_BAN_list,
-        #     rate_limit=300 # 600 en vrai d'après la doc
-        # )
-        # suppr les None
+            time.sleep(1) # 600 req/secondes = 0,001s pour 1 req => on y va 2000 fois plus lentement que le rate limiteur
+            k+=1
+            if k % 100 == 0:
+                logger.info(f"Ademe data extraction progress : {k}/{len(self.id_BAN_list)}")
+                time.sleep(60) # on attend 60 secondes toutes les 100 requetes pour ne pas dépasser le rate limit
         ademe_data_res = list(filter(lambda x: x is not None, ademe_data_res))
         if not ademe_data_res:
             logger.critical("Erreur dans le chargement des données Ademe : pas de données")

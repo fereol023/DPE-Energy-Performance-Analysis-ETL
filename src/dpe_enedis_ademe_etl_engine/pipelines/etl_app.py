@@ -1,4 +1,15 @@
 try:
+    import os
+    from pathlib import Path
+    from dotenv import load_dotenv
+    api_config = os.path.join(Path(__file__).resolve().parent.parent.parent.parent.parent, "config", ".env")
+    print(f"Loading environment variables from {api_config} ...")
+    load_dotenv(api_config)
+except:
+    print(f"No .env file found, using default environment variables into {api_config}.")
+    pass
+
+try:
     from ..scripts import extract, transform, load
     from ..utils.fonctions import get_env_var
     from ..utils import decorator_logger
@@ -72,9 +83,9 @@ dpe_enedis_ademe_etl_flow = flow(
 if __name__=="__main__":
     # orchestration
     dpe_enedis_ademe_etl_flow.serve(
-        name="deployment-etl-enedis-ademe-v01",
+        name="deployment-etl-enedis-ademe-v03-local",
         tags=["rncp", "dpe", "enedis", "ademe"],
-        cron="0 * * * *", 
+        cron="0 17 * * MON",  # every monday at 16:00
         parameters={"annee": 2023, "code_departement": 95, "batch_size": 2},
         pause_on_shutdown=True,
     )

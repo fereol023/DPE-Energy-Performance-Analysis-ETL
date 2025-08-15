@@ -115,6 +115,7 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
         si oui, on fait une imputatin par la médiane, si non 
         on fait une imputation par la moyenne. 
         """
+        logger = get_run_logger()
         col_fill_median, col_fill_mean = [], []
         for col in self.df.select_dtypes(include ='float').columns:
             if self.df[col].isna().any():
@@ -128,14 +129,17 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
                     self.df[col].fillna(self.df[col].median(), inplace=True)
                     col_fill_median.append(col)
                     self.cols_filled["median"].append(col)
+                    logger.info(f"Column {col} filled with median due to outliers below Q1 - 1.5*IQR.")
                 except Exception:
                     try:
                         born_sup[1]
                         self.df[col].fillna(self.df[col].median(), inplace=True)
                         col_fill_median.append(col)
+                        logger.info(f"Column {col} filled with median due to outliers above Q3 + 1.5*IQR.")
                     except Exception:
                         self.df[col] = self.df[col].fillna(self.df[col].mean())
                         col_fill_mean.append(col)
+                        logger.info(f"Column {col} filled with mean as no outliers detected.")
                     self.cols_filled["mean"].append(col)
         return self
 
@@ -157,28 +161,41 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
     
     @decorator_logger
     @task(name="transform-compute-conso-per-kwh", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
-    def compute_conso_kwh(self):
-        target = normalize_colnames_list(["Consommation annuelle moyenne par logement de l'adresse (MWh)_enedis_with_ban"])[0]
-        new_target = target.replace('mwh', 'kwh')
-        if target not in self.df.columns:
-            self.df[target] = 0
-        self.df[new_target] = 1_000*self.df[target]
-        return self
-    
+    def compute_conso_kwh(self): 
+        logger = get_run_logger()
+        input = 'consommation_annuelle_moyenne_par_logement_de_l_adresse_mwh_enedis'
+        input2 = 'consommation_annuelle_moyenne_par_site_de_l_adresse_mwh_enedis'
+        to_compute = 'conso_kwh'
+        if input in self.df.columns:
+            logger.info(f"Column {input} found. Computing {to_compute}.")
+            self.df[to_compute] = 1_000*self.df[input]
+            return self
+        elif input2 in self.df.columns:
+            logger.info(f"Column {input2} found. Computing {to_compute}.")
+            self.df[to_compute] = 1_000*self.df[input2]
+            return self
+        else:
+            logger.warning(f"Column {input} not found in DataFrame. Cannot compute {to_compute}.")
+            logger.warning(f"Column {input2} not found in DataFrame. Cannot compute {to_compute}.")
+            self.df[to_compute] = -1
+            return self
+            
     @decorator_logger
     @task(name="transform-compute-conso-per-kwh-per-m2", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def compute_conso_kwh_m2(self):
-        target = normalize_colnames_list(["Consommation annuelle moyenne par logement de l'adresse (MWh)_enedis_with_ban"])[0]
-        target = target.replace('mwh', 'kwh')
+        logger = get_run_logger()
+        conso = 'conso_kwh'
         surface = "surface_habitable_logement_ademe"
         to_compute = "conso_kwh_m2"
-        self.df[surface] = self.df[surface].replace(0, np.nan)  # Avoid division by zero
-        self.df[to_compute] = self.df[target] / self.df[surface]
+        self.df[surface] = self.df[surface].replace(0, np.nan)  # avoid division by zero
+        logger.info(f"Computing {to_compute} from {conso} and {surface}.")
+        self.df[to_compute] = self.df[conso] / self.df[surface]
         return self
 
     @decorator_logger
     @task(name="transform-compute-absolute-diff-cols", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def compute_absolute_diff_consos(self):
+        logger = get_run_logger()
         to_compute1 = "absolute_diff_conso_prim_fin"
         to_compute2 = "absolute_diff_conso_fin_act"
         to_compute3 = "consumption_difference"
@@ -189,6 +206,7 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
         assert conso_prim in self.df.columns, f"Column {conso_prim} not found in DataFrame. {conso_cols}"
         assert conso_fin in self.df.columns, f"Column {conso_fin} not found in DataFrame. {conso_cols}"
         assert conso_act in self.df.columns, f"Column {conso_act} not found in DataFrame. {conso_cols}"
+        logger.info(f"Computing {to_compute1}, {to_compute2}, and {to_compute3} from {conso_prim}, {conso_fin}, and {conso_act}.")
         self.df[to_compute1] = (self.df[conso_prim] - self.df[conso_fin]).abs()
         self.df[to_compute2] = (self.df[conso_act] - self.df[conso_fin]).abs()
         self.df[to_compute3] = (self.df[conso_prim] - self.df[conso_act])
@@ -273,6 +291,8 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
     @task(name="transform-save-tables-files", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def save_all(self):
         """Save the transformed data to parquet files in gold zone."""
+        logger = get_run_logger()
+        logger.info("Saving transformed data to parquet files in gold zone.")
         for n,d in [
             ("adresses", self.df_adresses), 
             ("logements", self.df_logements),
@@ -286,6 +306,8 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
                 dir=self.PATH_DATA_GOLD, # ? add le run id dans dir path
                 fname=f"{n}_{get_today_date()}_{self.batch_id}.parquet"
             )
+            logger.info(f"Saved {n} data to parquet file in gold zone.")
+        logger.info("All data saved successfully in gold zone.")
 
     @decorator_logger
     @task(name="transform-make-statistical-metrics", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
