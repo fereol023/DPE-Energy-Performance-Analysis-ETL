@@ -38,7 +38,7 @@ jobs:
 
     environment:
       name: testpypi
-      url: https://test.pypi.org/p/DPE-Energy-Performance-Analysis-ETL-pkg
+      url: https://test.pypi.org/project/dpe-enedis-ademe-etl-engine
 
     permissions:
       id-token: write  # IMPORTANT: mandatory for trusted publishing
