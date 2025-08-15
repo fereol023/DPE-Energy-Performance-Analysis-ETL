@@ -1,10 +1,8 @@
 # DPE-Energy-Performance-Analysis-ETL
 ETL module repos for DPE-Energy-Performance-Analysis-ETL package.
 
-| | |
-| --- | --- |
-| CI Testing | [![CI - Test](https://img.shields.io/badge/pytests-passing-green)](https://github.com/fereol023/DPE-Energy-Performance-Analysis-ETL/blob/main/.github/workflows/github-volt-engine-ci.yml)|
-| Package | [![PyPI Latest Release](https://img.shields.io/badge/dpe_enedis_ademe_etl_engine-v1.0.0-blue)](https://test.pypi.org/project/volt-etl-engine/) |
+
+[![CI - Test](https://img.shields.io/badge/pytests-passed-green)](https://github.com/fereol023/DPE-Energy-Performance-Analysis-ETL/blob/main/.github/workflows/github-volt-engine-ci.yml) [![PyPI Latest Release](https://img.shields.io/badge/dpe_enedis_ademe_etl_engine-v2.2.1-blue)](https://test.pypi.org/project/volt-etl-engine/)
 
 ### 📃 Description
 
@@ -104,20 +102,20 @@ This package requires some environment variables to be set. These are :
 
 ````python
 config = {
-  "ENV": "LOCAL", # or REMOTE
+  "ENV": "LOCAL", # or NOLOCAL
   "APP_NAME": "DPE-API",
   "APP_DESCRIPTION": "ETL for DPE Energy Performance Analysis",
   "LOGGER_APP_NAME": "ETL-Logger",
   # compulsory if you aim to run the ETL flow until the load step
-  "POSTGRES_HOST": "localhost",
+  "POSTGRES_HOST": "******",
   "POSTGRES_PORT": "5432",
-  "POSTGRES_DB_NAME": "dpedb",
+  "POSTGRES_DB_NAME": "******",
   "POSTGRES_ADMIN_USERNAME": "postgres",
-  "POSTGRES_ADMIN_PASSWORD": "password",
+  "POSTGRES_ADMIN_PASSWORD": "******",
   "POSTGRES_READER_USERNAME": "reader",
-  "POSTGRES_READER_PASSWORD": "reader_password",
+  "POSTGRES_READER_PASSWORD": "******",
   "POSTGRES_WRITER_USERNAME": "writer",
-  "POSTGRES_WRITER_PASSWORD": "writer_password",
+  "POSTGRES_WRITER_PASSWORD": "******",
   # compulsory if you aim to run the pipeline with remote storage for files
   "S3_ACCESS_KEY": "<YOUR_S3_ACCESS_KEY>",
   "S3_SECRET_KEY": "<YOUR_S3_SECRET_KEY>",
@@ -131,14 +129,12 @@ config = {
   "PATH_DATA_SILVER" : "etl/data/2_silver/",
   "PATH_DATA_GOLD" : "etl/data/3_gold/",
   "PATH_FILE_INPUT_ENEDIS_CSV": "etl/data/1_bronze/conso_enedis.csv",
-  # compulsory if you aim to run the transformation step
+  # compulsory if you aim to run the transformation pipeline
   "SCHEMA_ETL_INPUT_FILEPATH": "etl/ressources/schemas/schema_input.json",
   "SCHEMA_ETL_OUTPUT_FILEPATH": "etl/ressources/schemas/schema_output.json",
   "SCHEMA_GOLDEN_DATA_FILEPATH": "etl/ressources/schemas/schema_golden_data.json",
-  # logging tool, compulsory
-  "ELASTICSEARCH_HOST": "<HOST>",
-  "ELASTICSEARCH_PORT": "<PORT>",
-  "ELASTICSEARCH_INDEX": "dpe_async_idx"
+  # orchestration tool, compulsory
+  "PREFECT_API_URL": "http://host:port/api",
 }
 ````
 
@@ -150,7 +146,7 @@ config = {
 ### Schemas
 
 ### Authors 
-- Fereol Gbenou - *feel free to reach me here*
+- Fereol Gbenou - *feel free to reach me here for any contribution*
 <p align="center">
   <a href="https://www.linkedin.com/in/fereol-gbenou/" target="_blank">
     <img align="center" alt="LinkedIn" height="20" src="https://raw.githubusercontent.com/rahuldkjain/github-profile-readme-generator/master/src/images/icons/Social/linked-in-alt.svg" width="20"/>
