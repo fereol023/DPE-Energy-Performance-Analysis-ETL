@@ -239,7 +239,8 @@ class DataEnedisAdemeTransformer(FileStorageConnexion):
     @task(name="transform-select-and-split-per-entities", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def select_and_split(self, only_required_columns: bool=False):
         """Selection des colonnes et split en 3 tables : adresses, logements, consommations"""
-
+        logger = get_run_logger()
+        logger.info(f"Reading golden data configs from : {self.golden_data_config_fpath} and currently in {os.getcwd()}")
         # load cols from config
         self.cols_adresses = list(set(self.get_cols("schema-adresses", only_required_columns)))
         self.cols_logements = list(set(self.get_cols("schema-logements", only_required_columns)))
