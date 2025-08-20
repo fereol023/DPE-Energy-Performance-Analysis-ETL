@@ -86,7 +86,7 @@ if __name__=="__main__":
     dpe_enedis_ademe_etl_flow.serve(
         name="deployment-etl-enedis-ademe-v03-local",
         tags=["rncp", "dpe", "enedis", "ademe"],
-        cron="0 17 * * MON",  # every monday at 16:00
+        cron="0 * * * *",  # every monday at 16:00
         parameters={"annee": 2023, "code_departement": 95, "batch_size": 2},
         pause_on_shutdown=True,
     )

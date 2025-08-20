@@ -149,7 +149,7 @@ def get_async_elk_logger(app_name=None) ->logging.Logger:
     listener.start()
 
     _logger.propagate = False  # Prevents the log messages from being propagated to the root logger
-    _logger.info(f"Logger initialized for {LOGGER_APP_NAME} with Elasticsearch")
+    # _logger.info(f"Logger initialized for {LOGGER_APP_NAME} with Elasticsearch")
     return _logger
 
 
