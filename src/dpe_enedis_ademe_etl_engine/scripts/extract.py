@@ -99,6 +99,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         # --- fonctions urls ---
         # generer une url pour requeter l'api enedis avec restriction sur l'année et le nombre de lignes
         self.get_url_enedis_year_rows = lambda annee, rows: f"https://data.enedis.fr/api/explore/v2.1/catalog/datasets/consommation-annuelle-residentielle-par-adresse/records?where=annee%20%3D%20date'{annee}'&limit={rows}"
+        self.get_url_enedis=lambda annee,  code_departement, limit, offset: f"https://data.enedis.fr/api/explore/v2.1/catalog/datasets/consommation-annuelle-residentielle-par-adresse/records?where=annee%3Ddate%27{annee}%27%20and%20code_departement%3D%27{code_departement}%27&order_by=tri_des_adresses&limit={limit}&offset={offset}"
         # generer une url pour requeter l'api de la ban à partir d'une adresse
         self.get_url_ademe_filter_on_ban = lambda key: f"https://data.ademe.fr/data-fair/api/v1/datasets/dpe-v2-logements-existants/lines?size=1000&format=json&qs=Identifiant__BAN%3A{key}"
         self.get_url_ademe_filter_on_ban = lambda key: f"https://data.ademe.fr/data-fair/api/v1/datasets/dpe03existant/lines?q_fields=identifiant_ban&q={key}" # update 19 juillet 2025
@@ -349,6 +350,20 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         self.input['nom_commune'] = self.input['nom_commune'].astype('str')
         self.input['full_adress'] = self.input['adresse'] + ' ' + self.input['code_commune'] + ' ' + self.input['nom_commune']
 
+    def call_enedis_api_single_thread(self, annee, code_departement, limit, offset):
+        u = self.get_url_enedis(annee, code_departement, limit, offset)
+        resp = requests.get(u)
+        if resp.status_code == 200:
+            return resp.json().get('results', [])
+        return []
+
+    def call_enedis_api_mutlithreads(self, annee, code_departement):
+        params = [{"annee":annee, "code_departement":code_departement, "limit":100, "offset":i*100} for i in range(100)]
+        results = []
+        for p in params:
+            results.extend(self.call_enedis_api_single_thread(**p))
+        return results
+
     # TACHE EXTRACTION 1
     @decorator_logger
     @task(name="extract-data-from-enedis-api", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
@@ -375,13 +390,16 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
             self.load_batch_input()
             if self.debug: self.debugger.update({'source_enedis': "input csv"})
         else:
-            requete_url_enedis = self.get_url_enedis_year_rows(annee, rows)
-            if code_departement>0: # filter sur le code département dans l'url
-                # requete_url_enedis += f"&where=code_departement%20%3D%20{code_departement}"
-                requete_url_enedis += f"&code_departement%3D{code_departement}"
-            self.input = self.get_dataframe_from_url(requete_url_enedis)
-            logger.info(f"Extract input from url enedis :\n {requete_url_enedis}")
-            if self.debug: self.debugger.update({'source_enedis': requete_url_enedis})
+            if rows == -1:
+                self.input = pd.DataFrame(self.call_enedis_api_mutlithreads(annee=annee, code_departement=code_departement)).drop_duplicates().reset_index(drop=True)
+            else:
+                requete_url_enedis = self.get_url_enedis_year_rows(annee, rows)
+                if code_departement>0: # filter sur le code département dans l'url
+                    # requete_url_enedis += f"&where=code_departement%20%3D%20{code_departement}"
+                    requete_url_enedis += f"&code_departement%3D{code_departement}"
+                self.input = self.get_dataframe_from_url(requete_url_enedis)
+                logger.info(f"Extract input from url enedis :\n {requete_url_enedis}")
+                if self.debug: self.debugger.update({'source_enedis': requete_url_enedis})
         
         logger.info(f"Shape of raw loaded dataframe : {self.input.shape} with cols {list(self.input.columns)}")
 
@@ -463,12 +481,17 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         ademe_data_res = []
         k = 0
         for _id in self.id_BAN_list:
-            ademe_data_res.append(requests.get(self.get_url_ademe_filter_on_ban(_id), timeout=90).json().get('results'))
+            try:
+                resp = requests.get(self.get_url_ademe_filter_on_ban(_id), timeout=60)
+                if resp.status_code==200:
+                    ademe_data_res.append(resp.json().get('results'))
+            except:
+                pass
             time.sleep(1) # 600 req/secondes = 0,001s pour 1 req => on y va 2000 fois plus lentement que le rate limiteur
             k+=1
             if k % 100 == 0:
                 logger.info(f"Ademe data extraction progress : {k}/{len(self.id_BAN_list)}")
-                time.sleep(60) # on attend 60 secondes toutes les 100 requetes pour ne pas dépasser le rate limit
+                time.sleep(10) # on attend 60 secondes toutes les 100 requetes pour ne pas dépasser le rate limit
         ademe_data_res = list(filter(lambda x: x is not None, ademe_data_res))
         if not ademe_data_res:
             logger.critical("Erreur dans le chargement des données Ademe : pas de données")
