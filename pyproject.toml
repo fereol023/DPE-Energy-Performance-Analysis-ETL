@@ -1,6 +1,6 @@
 [project]
 name = "dpe_enedis_ademe_etl_engine"
-version = "2.2.4"
+version = "2.2.5"
 authors = [
     { name="Féréol Gbenou", email="fereol.gbenou@ynov.com" },
 ]
