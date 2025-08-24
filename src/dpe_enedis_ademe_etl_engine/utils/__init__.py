@@ -176,7 +176,7 @@ def decorator_logger(func, logger=get_async_elk_logger()):
                 logger.critical(log_entry)
                 raise Exception(f"Error in function {func.__name__}: {log_entry['details']['message']}")
             else:
-                logger.info(log_entry)
+                # logger.info(log_entry)
                 log_entry["severity"] = "INFO"
                 # print(log_entry)
                 return result
