@@ -1,0 +1,4 @@
+[submodule "api"]
+	path = api
+	url = https://github.com/fereol023/DPE-Energy-Performance-Analysis-API.git
+	branch = fg/refacto
