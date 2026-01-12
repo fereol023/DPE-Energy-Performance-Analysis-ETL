@@ -10,6 +10,5 @@ jobs:
     call-github-python-pytests-workflow:
       uses: fereol023/pipelines_templates/.github/workflows/github-docker-build-and-push.yml@main
       with:
-        pythonVersion: 3.12
         hasSubmodules: true
         dockerfile_path: 'api/Dockerfile.uv.distro'
