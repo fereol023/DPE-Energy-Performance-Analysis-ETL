@@ -1,7 +1,10 @@
 name: ghaction-build-pkg-volt-engine
 run-name: BUILD${{ github.run_number }}-${{ github.event.repository.name }}-${{ github.workflow }}_${{ github.ref_name }}
 
-on: push
+on: 
+  push:
+    branches:
+      - main
 
 jobs:
   build:
