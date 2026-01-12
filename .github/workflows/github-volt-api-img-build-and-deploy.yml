@@ -13,3 +13,5 @@ jobs:
         hasSubmodules: true
         dockerfile_path: 'api/Dockerfile.uv.distro'
         GIT_TAG: ${{ inputs.api-tag }}
+        CR_USER: ${{ secrets.CR_USER }}
+        CR_PWD: ${{ secrets.CR_PWD }}
