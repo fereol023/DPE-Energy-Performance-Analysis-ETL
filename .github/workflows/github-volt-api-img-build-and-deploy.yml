@@ -1,9 +1,9 @@
 name: ghaction-cd-volt-engine-etl-docker-img
 run-name: CD${{ github.run_number }}-${{ github.event.repository.name }}-${{ github.workflow }}_${{ github.ref_name }}
 on: 
-    workflow_call:
+    workflow_dispatch: # allows api repos to trigger this
       inputs:
-          api-tag:
+          api_tag:
               required: true
               type: string
 jobs:
@@ -15,5 +15,6 @@ jobs:
       with:
         hasSubmodules: true
         dockerfile_path: 'api/Dockerfile.uv.distro'
-        GIT_TAG: ${{ inputs.api-tag }}
+        GIT_TAG: ${{ inputs.api_tag }}
+        
         
