@@ -6,7 +6,6 @@ import datetime
 import logging.handlers
 from typing import Union
 from functools import wraps
-from elasticsearch import Elasticsearch
 from concurrent.futures import ThreadPoolExecutor
 
 try:

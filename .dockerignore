@@ -6,6 +6,10 @@ storage/
 ressources/*/*/*.parquet
 ressources/*/*.log
 ressources/schemas/*.json
+**venv/
+**.venv/
+**env/
+**.env/
 
 # macOS system files
 */.DS_Store
