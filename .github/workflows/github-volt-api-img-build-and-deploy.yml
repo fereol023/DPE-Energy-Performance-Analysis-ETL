@@ -9,9 +9,11 @@ on:
 jobs:
     call-github-python-pytests-workflow:
       uses: fereol023/pipelines_templates/.github/workflows/github-docker-build-and-push.yml@main
+      secrets:
+        CR_USER: ${{ secrets.CR_USER }}
+        CR_PWD: ${{ secrets.CR_PWD }}
       with:
         hasSubmodules: true
         dockerfile_path: 'api/Dockerfile.uv.distro'
         GIT_TAG: ${{ inputs.api-tag }}
-        CR_USER: ${{ secrets.CR_USER }}
-        CR_PWD: ${{ secrets.CR_PWD }}
+        
