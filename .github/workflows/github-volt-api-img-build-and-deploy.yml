@@ -1,6 +1,11 @@
 name: ghaction-cd-volt-engine-etl-docker-img
 run-name: CD${{ github.run_number }}-${{ github.event.repository.name }}-${{ github.workflow }}_${{ github.ref_name }}
-on: [workflow_call]
+on: 
+    workflow_call:
+      inputs:
+          tag:
+              required: true
+              type: string
 jobs:
     call-github-python-pytests-workflow:
       uses: fereol023/pipelines_templates/.github/workflows/github-docker-build-and-push.yml@main
