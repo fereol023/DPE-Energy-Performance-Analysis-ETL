@@ -2,7 +2,7 @@
 ETL module repos for DPE-Energy-Performance-Analysis-ETL package.
 
 
-[![CI - Test](https://img.shields.io/badge/pytests-passed-green)](https://github.com/fereol023/DPE-Energy-Performance-Analysis-ETL/blob/main/.github/workflows/github-volt-engine-ci.yml) [![PyPI Latest Release](https://img.shields.io/badge/dpe_enedis_ademe_etl_engine-v2.2.5-blue)](https://test.pypi.org/project/volt-etl-engine/)
+[![CI - Test](https://img.shields.io/badge/pytests-passed-green)](https://github.com/fereol023/DPE-Energy-Performance-Analysis-ETL/blob/main/.github/workflows/github-volt-engine-ci.yml) [![PyPI Latest Release](https://img.shields.io/badge/dpe_enedis_ademe_etl_engine-v2.2.10-blue)](https://test.pypi.org/project/volt-etl-engine/)
 
 ### 📃 Description
 
