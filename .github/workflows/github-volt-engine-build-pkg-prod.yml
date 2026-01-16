@@ -1,7 +1,11 @@
 name: ghaction-build-pkg-volt-engine
 run-name: BUILD${{ github.run_number }}-${{ github.event.repository.name }}-${{ github.workflow }}_${{ github.ref_name }}
 
-on: push
+on: 
+  push:
+    branches:
+      - releases/pypi
+      - main # is needed to sync btwn pkg versions and server images
 
 jobs:
   build:
