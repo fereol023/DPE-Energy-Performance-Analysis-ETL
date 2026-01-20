@@ -20,8 +20,9 @@ from prefect.server.schemas.schedules import CronSchedule
 from prefect.cache_policies import NO_CACHE
 
 try:
+    from ..scripts import Envs
     from ..scripts.filestorage_helper import FileStorageConnexion
-    from ..utils import logger, decorator_logger
+    from ..utils import decorator_logger
     from ..utils.fonctions import (
         get_env_var,
         get_today_date, 
@@ -33,8 +34,9 @@ except ImportError:
     current_dir = Path(__file__).resolve().parent
     parent_dir = current_dir.parent
     sys.path.append(str(parent_dir))
+    from scripts import Envs
     from scripts.filestorage_helper import FileStorageConnexion
-    from utils import logger, decorator_logger
+    from utils import decorator_logger
     from utils.fonctions import (
         get_env_var,
         get_today_date, 
@@ -124,8 +126,6 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         If the input CSV file is not valid or does not contain the required columns,
         it will raise an AssertionError.
         """
-        logger = get_run_logger()
-
         def load_enedis_input_from_local_csv():
             self.input = pd.read_csv(self.PATH_FILE_INPUT_ENEDIS_CSV, sep=';')
                      
@@ -140,16 +140,16 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
             else:
                 load_enedis_input_from_s3_csv()
         except:
-            logger.critical(f"Erreur dans le chargement du fichier CSV input : {self.PATH_FILE_INPUT_ENEDIS_CSV}")
+            self.engine_logger.critical(f"Erreur dans le chargement du fichier CSV input : {self.PATH_FILE_INPUT_ENEDIS_CSV}")
             raise
 
     @decorator_logger
     def get_dataframe_from_url(self, url):
         """Extract pandas dataframe from any valid url."""
-        logger.info(f"Fetching data from : {url}")
+        self.engine_logger.info(f"Fetching data from : {url}")
         res = requests.get(url)
         if res.status_code != 200:
-            logger.critical(f"Error fetching data from {url} - Status code: {res.status_code} - Status message: {res.text}")
+            self.engine_logger.critical(f"Error fetching data from {url} - Status code: {res.status_code} - Status message: {res.text}")
             raise ValueError(f"Error fetching data from {url} - Status code: {res.status_code} - Status message: {res.text}")
         res = res.json().get('results')
         return pd.DataFrame(res)
@@ -189,10 +189,10 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
             if j.get('results'):
                 return j.get('results')[0]
             else:
-                logger.warning(f"No results found for id_ban: {id_ban}")
+                self.engine_logger.warning(f"No results found for id_ban: {id_ban}")
                 return None
         else:
-            logger.error(f"Error fetching data for id_ban: {id_ban}. Status code: {res.status_code}")
+            self.engine_logger.error(f"Error fetching data for id_ban: {id_ban}. Status code: {res.status_code}")
             return None
     
     def request_ban_from_adress_list(self, adress_list, n_threads):
@@ -318,7 +318,6 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
     @decorator_logger
     @task(name="validate-enedis-input-df-schema", retries=3, retry_delay_seconds=10, cache_policy=NO_CACHE)
     def validate_schema_input(self):
-        logger = get_run_logger()
         try:
             cols = self.input.columns
             assert not self.input.empty, f"Erreur dans le chargement du fichier CSV input : {self.PATH_FILE_INPUT_ENEDIS_CSV}"
@@ -328,7 +327,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
             assert ('Code IRIS' in cols) or ('code_iris' in cols), f"'Code IRIS' not in input columns : {cols}"
             assert ('Code Département' in cols) or ('code_departement' in cols), f"'Code Département' not in input columns : {cols}"
         except Exception as e:
-            logger.critical(f"Enedis schema validation failed with exception : {e}")
+            self.engine_logger.critical(f"Enedis schema validation failed with exception : {e}")
 
     # TACHE AJOUTER LES COLONNES A ENEDIS
     @decorator_logger
@@ -383,8 +382,6 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         :param rows: Number of rows to extract from the Enedis API.
         :return: self, with self.input containing the Enedis data.
         """
-        logger = get_run_logger()
-
         if self.debug: print("-> get_enedis_data")
         if from_input:
             self.load_batch_input()
@@ -398,10 +395,10 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
                     # requete_url_enedis += f"&where=code_departement%20%3D%20{code_departement}"
                     requete_url_enedis += f"&code_departement%3D{code_departement}"
                 self.input = self.get_dataframe_from_url(requete_url_enedis)
-                logger.info(f"Extract input from url enedis :\n {requete_url_enedis}")
+                self.engine_logger.info(f"Extract input from url enedis :\n {requete_url_enedis}")
                 if self.debug: self.debugger.update({'source_enedis': requete_url_enedis})
         
-        logger.info(f"Shape of raw loaded dataframe : {self.input.shape} with cols {list(self.input.columns)}")
+        self.engine_logger.info(f"Shape of raw loaded dataframe : {self.input.shape} with cols {list(self.input.columns)}")
 
         # valider le schema
         self.validate_schema_input()
@@ -410,9 +407,9 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         if (from_input) and (code_departement>0): # filter sur le code département dans le df input
             self.input = self.input[self.input['code_departement']==code_departement]
             if rows > 0: self.input = self.input.head(rows)
-            logger.info(f"Filtering input data on code département : {code_departement} ({self.input.shape[0]} rows, {self.input.shape[1]} columns)")
+            self.engine_logger.info(f"Filtering input data on code département : {code_departement} ({self.input.shape[0]} rows, {self.input.shape[1]} columns)")
         
-        logger.info(f"Shape of loaded dataframe : {self.input.shape} with cols {list(self.input.columns)}")
+        self.engine_logger.info(f"Shape of loaded dataframe : {self.input.shape} with cols {list(self.input.columns)}")
         return self
 
     # TACHE EXTRACTION 2
@@ -425,10 +422,9 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         :return: self, with self.ban_data containing the BAN data.
         :raises ValueError: If the input dataframe is empty.
         """
-        logger = get_run_logger()
         # tache 1 - prendre input enedis
         if self.input.empty:
-            logger.critical("Erreur dans le chargement du fichier CSV input : pas de données")
+            self.engine_logger.critical("Erreur dans le chargement du fichier CSV input : pas de données")
             raise ValueError("Pas de données dans le dataframe")
 
         # tache 2 - constituer les adresses enedis
@@ -450,7 +446,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         # tache 4 - filtrer les adresses valides
         self.ban_data = list(filter(lambda x: x is not None, self.ban_data))
         if not self.ban_data:
-            logger.critical("Erreur dans le chargement des données BAN : pas de données")
+            self.engine_logger.critical("Erreur dans le chargement des données BAN : pas de données")
             raise ValueError("Pas de données dans le dataframe BAN")
         # tache 5 - convertir en dataframe pandas
         self.ban_data = pd.DataFrame(self.ban_data)
@@ -459,7 +455,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         self.ban_data['label'] = vectorized_upper(self.ban_data['label'].values) 
         # on remet en upper car on en a besoin pour le merge avec enedis
         if self.debug: self.debugger.update({'sample_ban_data': self.ban_data.tail(5)})
-        logger.info(f"Valid data BAN : {len(self.ban_data)} addresses founded over {len(enedis_adresses_list)} requested.")
+        self.engine_logger.info(f"Valid data BAN : {len(self.ban_data)} addresses founded over {len(enedis_adresses_list)} requested.")
         return self
 
     # TACHE EXTRACTION 3
@@ -474,7 +470,6 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         - sur la base des Identifiants BAN de enedis, aller chercher les logements mappés sur ces codes BAN
         - 1 id_ban = * adresses (entre 10 et 1_000) - en effet, les données enedis sont agrégées
         """
-        logger = get_run_logger()
         if self.debug: print("-> get_ademe_data")
         ademe_data = []
         # ? multithreading -> limite les requetes en parallele - renvoie 0 resultats si trop de requetes en parallele
@@ -490,11 +485,11 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
             time.sleep(1) # 600 req/secondes = 0,001s pour 1 req => on y va 2000 fois plus lentement que le rate limiteur
             k+=1
             if k % 100 == 0:
-                logger.info(f"Ademe data extraction progress : {k}/{len(self.id_BAN_list)}")
+                self.engine_logger.info(f"Ademe data extraction progress : {k}/{len(self.id_BAN_list)}")
                 time.sleep(10) # on attend 60 secondes toutes les 100 requetes pour ne pas dépasser le rate limit
         ademe_data_res = list(filter(lambda x: x is not None, ademe_data_res))
         if not ademe_data_res:
-            logger.critical("Erreur dans le chargement des données Ademe : pas de données")
+            self.engine_logger.critical("Erreur dans le chargement des données Ademe : pas de données")
             raise ValueError("Pas de données dans le dataframe Ademe")
         # on a une liste de listes, chaque liste correspond à un id_ban
         # on obtient une liste à 2 niveaux pour chaque Id_BAN 
@@ -522,7 +517,6 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         # note : si une adresse est pas  trouvée on tej la data enedis (cf. inner join)
         # merge enedis avec ban
         # ? - free memory
-        logger = get_run_logger()
         if self.debug: print("-> merge_and_save_enedis_with_ban_as_output")
         self.input = self.input.add_suffix('_enedis')
         self.ban_data = self.ban_data.add_suffix('_ban')
@@ -552,7 +546,6 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         """
         Merge all dataframes to get the final dataframe.
         """
-        logger = get_run_logger()
         if self.debug: print("-> get_ademe_data")
         # reconstituer le dataframe complet
         enedis_with_ban_data = self.load_parquet_file(
@@ -560,8 +553,8 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
             fname=f"enedis_with_ban_data_tmp_{get_today_date()}.parquet"
         )
         # enedis_with_ban_data = enedis_with_ban_data.add_suffix('_enedis_with_ban')
-        logger.info(f"Enedis with BAN data loaded : {enedis_with_ban_data.shape[0]} rows, {enedis_with_ban_data.shape[1]} columns.")
-        logger.info(f"Ademe data loaded : {self.ademe_data.shape[0]} rows, {self.ademe_data.shape[1]} columns.")
+        self.engine_logger.info(f"Enedis with BAN data loaded : {enedis_with_ban_data.shape[0]} rows, {enedis_with_ban_data.shape[1]} columns.")
+        self.engine_logger.info(f"Ademe data loaded : {self.ademe_data.shape[0]} rows, {self.ademe_data.shape[1]} columns.")
         assert 'identifiant_ban_ademe' in self.ademe_data.columns, \
             "identifiant_ban_ademe column not found in Ademe data. Check the schema or the data extraction process. (Identifiant__BAN or identifiant_ban)"
         assert 'id_BAN' in enedis_with_ban_data.columns, \
@@ -627,7 +620,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
             .merge_and_save_enedis_with_ban_as_output()\
             .get_ademe_data(n_threads_for_querying)\
             .merge_all_as_output()
-        logger.info(f"Extraction results : {self.output.shape[0]} rows, {self.output.shape[1]} columns.")
+        self.engine_logger.info(f"Extraction results : {self.output.shape[0]} rows, {self.output.shape[1]} columns.")
         # save schema
         if save_schema:
             fpath = get_env_var('SCHEMA_SILVER_DATA_FILEPATH', compulsory=True)
@@ -635,7 +628,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
             if not os.path.exists(fpath): 
                 os.makedirs(fdir, exist_ok=True)
                 self._save_df_schema(self.output, fpath)
-                logger.info(f"Extraction schema saved in : {fpath}")
+                self.engine_logger.info(f"Extraction schema saved in : {fpath}")
         if self.debug: 
             import pprint
             pprint.pprint(self.debugger)
