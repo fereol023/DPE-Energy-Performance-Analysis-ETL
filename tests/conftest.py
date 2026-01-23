@@ -7,7 +7,7 @@ import pytest
 import pandas as pd
 
 def set_config(config_folder, data_folder):
-    """util to setup config"""
+    """utils to setup config"""
     dict_config = json.load(open(os.path.join(config_folder, "config.json"), "r"))
     dict_config.update({'PATH_ARCHIVE_DIR': os.path.join(data_folder, 'tmp', 'archive')})
     dict_config.update({'PATH_DATA_BRONZE': os.path.join(data_folder, 'tmp', 'bronze')})
