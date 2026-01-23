@@ -1,7 +1,7 @@
 # DPE-Energy-Performance-Analysis-ETL
 ETL module repos for DPE-Energy-Performance-Analysis-ETL package.
 
-[![CI - Tests](https://github.com/fereol023/DPE-Energy-Performance-Analysis-ETL/actions/workflows/github-volt-engine-ci.yml/badge.svg)](https://github.com/fereol023/DPE-Energy-Performance-Analysis-ETL/actions/workflows/github-volt-engine-ci.yml)  [![PyPI Latest Release](https://img.shields.io/badge/dpe_enedis_ademe_etl_engine-v2.3.1-blue)](https://test.pypi.org/project/volt-etl-engine/)
+[![CI - Tests](https://github.com/fereol023/DPE-Energy-Performance-Analysis-ETL/actions/workflows/github-volt-engine-ci.yml/badge.svg?branch=main)](https://github.com/fereol023/DPE-Energy-Performance-Analysis-ETL/actions/workflows/github-volt-engine-ci.yml)  [![PyPI Latest Release](https://img.shields.io/badge/dpe_enedis_ademe_etl_engine-v2.3.1-blue)](https://test.pypi.org/project/volt-etl-engine/)
 
 ### 📃 Description
 
@@ -11,7 +11,7 @@ This ETL module is responsible for extracting, transforming, and loading energy 
 
 - Depending on whether you have input file (a csv file which specifies locations on which you want to focus your extraction) or not there are two ways to use the extract module.  
 
-- **Transformation step** will require that you define dataframe schemas. There are some function used in this project (based on our red-line project). But you can also go through the code and implement your own transformation functions.
+- **Transformation steps** will require that you define dataframe schemas. There are some function used in this project (based on our red-line project). But you can also go through the code and implement your own transformation functions.
 
 - **Loading step** send the output golden data to the RDMS (postgres connection is implemented but one more time you are free to customize the code to fit your needs).
 
