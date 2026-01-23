@@ -9,8 +9,8 @@ from minio import Minio
 from pyarrow import Table, parquet as pq
 
 try:
-    from ..scripts import Paths
-    from ..utils import logger, decorator_logger
+    from ..scripts import Paths, Envs
+    from ..utils import async_logger, decorator_logger
     from ..utils.fonctions import (
         get_env_var,
         get_today_date, 
@@ -21,8 +21,8 @@ except ImportError:
     current_dir = Path(__file__).resolve().parent
     parent_dir = current_dir.parent
     sys.path.append(str(parent_dir))
-    from scripts import Paths
-    from utils import logger, decorator_logger
+    from scripts import Paths, Envs
+    from utils import async_logger, decorator_logger
     from utils.fonctions import (
         get_env_var,
         get_today_date, 
@@ -40,10 +40,21 @@ class FileStorageConnexion(Paths):
         self.__set_client()
         self.get_today_date = get_today_date
         self.batch_id = get_env_var('BATCH_CORRELATION_ID', compulsory=True, cast_to_type=str)
+        self.engine_logger = self.get_engine_logger()
+
+    def get_engine_logger(self,):
+        """Get either prefect logger or async logger based on environment."""
+        try:
+            from prefect import get_run_logger
+        except ImportError:
+            return async_logger
+        else:
+            return get_run_logger() if get_env_var("ENV", compulsory=True)==Envs.PROD else async_logger
+
 
     def __set_client(self):
         try:
-            if self.env == "LOCAL":
+            if self.env in [Envs.LOCAL, Envs.ISOLATED]:
                 self.client = None
             else:
                 # client minio is just used to init the bucket
@@ -75,7 +86,7 @@ class FileStorageConnexion(Paths):
         def purge_s3_archive_dir():
             self.client.remove_objects(self.BUCKET_NAME, prefix=self.PATH_ARCHIVE_DIR)    
  
-        if self.env == "LOCAL":
+        if self.env in [Envs.LOCAL, Envs.ISOLATED]:
             purge_local_archive_dir()
         else:
             purge_s3_archive_dir()
@@ -120,9 +131,9 @@ class FileStorageConnexion(Paths):
                 length=len(json_data),
                 content_type="application/json"
             )
-            logger.info(f"Uploaded {fname} to bucket {self.BUCKET_NAME}.")
+            self.engine_logger.info(f"Uploaded {fname} to bucket {self.BUCKET_NAME}.")
 
-        if self.env=="LOCAL":
+        if self.env in [Envs.LOCAL, Envs.ISOLATED]:
             save_parquet_file_to_local()
         else:
             save_parquet_file_to_s3()
@@ -150,7 +161,7 @@ class FileStorageConnexion(Paths):
                 lines=True
             )
          
-        if self.env=="LOCAL":
+        if self.env in [Envs.LOCAL, Envs.ISOLATED]:
             return load_parquet_file_from_local()
         else:
             return load_parquet_file_from_s3()
@@ -163,7 +174,7 @@ class FileStorageConnexion(Paths):
             with open(fpath, "w") as f:
                 json.dump(schema, f, separators=(',', ': '), indent=4)
         except Exception as e:
-            logger.error(f"Erreur sauvegarde schema data parquet file {fpath}: {e}")
+            self.engine_logger.error(f"Erreur sauvegarde schema data parquet file {fpath}: {e}")
             raise
 
     def _load_df_schema(self, fpath):
@@ -172,5 +183,5 @@ class FileStorageConnexion(Paths):
             with open(fpath, "r") as f:
                 return json.load(f)
         except Exception as e:
-            logger.error(f"Erreur chargement schema data parquet file {fpath}: {e}")
+            self.engine_logger.error(f"Erreur chargement schema data parquet file {fpath}: {e}")
             raise

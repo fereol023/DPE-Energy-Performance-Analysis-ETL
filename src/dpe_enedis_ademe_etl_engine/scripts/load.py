@@ -11,7 +11,7 @@ from prefect.server.schemas.schedules import CronSchedule
 from prefect.cache_policies import NO_CACHE
 
 try:
-    from ..utils import decorator_logger, logger
+    from ..utils import decorator_logger
     from ..scripts.filestorage_helper import FileStorageConnexion
     from ..utils.fonctions import get_env_var
 except ImportError:
@@ -21,7 +21,7 @@ except ImportError:
     parent_dir = current_dir.parent
     sys.path.append(str(parent_dir))
     from scripts.filestorage_helper import FileStorageConnexion
-    from utils import decorator_logger, logger
+    from utils import decorator_logger
     from utils.fonctions import get_env_var
 
 class DataEnedisAdemeLoader(FileStorageConnexion):
@@ -96,7 +96,6 @@ class DataEnedisAdemeLoader(FileStorageConnexion):
         pd.dataframe.to_sql() ne fonctionne pas avec postgres.
         on utilise un engine sqlalchemy pour se connecter à la bdd.
         """
-        logger = get_run_logger()
         # ------- Vérification des paramètres
         if (self.db_connection is None) and (self.engine is None):
             raise ValueError("La connexion à la base de données est requise/engine est requis.")
@@ -113,11 +112,11 @@ class DataEnedisAdemeLoader(FileStorageConnexion):
         if not pk_cols: raise ValueError(f"Aucune clé primaire définie pour la table {table_name}.")
         for col in pk_cols:
             if col not in df.columns:
-                logger.warning(f"La colonne clé primaire {col} n'existe pas dans le DataFrame pour la table {table_name}.")
+                self.engine_logger.warning(f"La colonne clé primaire {col} n'existe pas dans le DataFrame pour la table {table_name}.")
                 continue
             # forcer le type de la colonne clé primaire à str pour éviter les erreurs d'insertion
             df[col] = df[col].astype(str)
-            logger.info(f"Colonne {col} convertie en type str pour la table {table_name}.")
+            self.engine_logger.info(f"Colonne {col} convertie en type str pour la table {table_name}.")
 
 
         # idempotence : on ne veut pas insérer des doublons dans la table
@@ -127,7 +126,7 @@ class DataEnedisAdemeLoader(FileStorageConnexion):
         try:
             existing_df = pd.read_sql_table(table_name, con=self.engine)
         except Exception as e:
-            logger.warning(f"Impossible de lire la table {table_name} pour vérifier les doublons : {e}")
+            self.engine_logger.warning(f"Impossible de lire la table {table_name} pour vérifier les doublons : {e}")
             existing_df = pd.DataFrame()
 
         if not existing_df.empty:
@@ -138,41 +137,41 @@ class DataEnedisAdemeLoader(FileStorageConnexion):
             key_cols = [col for col in pk_cols if col in df.columns and col in existing_df.columns]
             if key_cols:
                 if len(key_cols) == 1:
-                    logger.info(f"Utilisation de la colonne clé primaire unique {key_cols[0]} pour la déduplication dans la table {table_name}.")
+                    self.engine_logger.info(f"Utilisation de la colonne clé primaire unique {key_cols[0]} pour la déduplication dans la table {table_name}.")
                     # récuperer les clés déjà existantes dans la table
                     exiting_keys = existing_df[key_cols[0]].unique()
                     # supprimer les lignes du DataFrame qui existent déjà dans la table
-                    logger.info(f"Suppression des doublons dans le DataFrame pour la table {table_name} en utilisant la colonne clé {key_cols[0]}.")
-                    if self.debug: logger.info(f"Clés existantes dans la table {table_name}: ({len(exiting_keys.tolist())}) : {exiting_keys.tolist()}.")
+                    self.engine_logger.info(f"Suppression des doublons dans le DataFrame pour la table {table_name} en utilisant la colonne clé {key_cols[0]}.")
+                    if self.debug: self.engine_logger.info(f"Clés existantes dans la table {table_name}: ({len(exiting_keys.tolist())}) : {exiting_keys.tolist()}.")
                     df = df[~df[key_cols[0]].isin(exiting_keys)]
-                    logger.info(f"Nombre de lignes après suppression des observations déjà enregistées: {len(df)}.")
-                    if self.debug: logger.info(f"Nouvelles clés à insérer dans la table {table_name}: {df[key_cols[0]].unique().tolist()} : {df.to_dict(orient='records')}.")
+                    self.engine_logger.info(f"Nombre de lignes après suppression des observations déjà enregistées: {len(df)}.")
+                    if self.debug: self.engine_logger.info(f"Nouvelles clés à insérer dans la table {table_name}: {df[key_cols[0]].unique().tolist()} : {df.to_dict(orient='records')}.")
                 else:
-                    logger.info(f"Utilisation des colonnes clés primaires {key_cols} pour la déduplication dans la table {table_name}.")
+                    self.engine_logger.info(f"Utilisation des colonnes clés primaires {key_cols} pour la déduplication dans la table {table_name}.")
                     # récuperer les clés déjà existantes dans la table
                     exiting_keys = existing_df[key_cols].drop_duplicates()
                     # supprimer les lignes du DataFrame qui existent déjà dans la table
-                    logger.info(f"Suppression des doublons dans le DataFrame pour la table {table_name} en utilisant les colonnes clés {key_cols}.")
-                    if self.debug: logger.info(f"Clés existantes dans la table {table_name}: ({len(exiting_keys)}) : {exiting_keys.to_dict(orient='records')}.")
+                    self.engine_logger.info(f"Suppression des doublons dans le DataFrame pour la table {table_name} en utilisant les colonnes clés {key_cols}.")
+                    if self.debug: self.enginelogger.info(f"Clés existantes dans la table {table_name}: ({len(exiting_keys)}) : {exiting_keys.to_dict(orient='records')}.")
                     df = df.merge(exiting_keys, on=key_cols, how='left', indicator=True)
                     df = df[df['_merge'] == 'left_only'].drop(columns=['_merge'])
-                    logger.info(f"Nombre de lignes après suppression des observations déjà enregistées: {len(df)}.")
-                    if self.debug: logger.info(f"Nouvelles clés à insérer dans la table {table_name}: {df[key_cols].to_dict(orient='records')}.")
+                    self.engine_logger.info(f"Nombre de lignes après suppression des observations déjà enregistées: {len(df)}.")
+                    if self.debug: self.engine_logger.info(f"Nouvelles clés à insérer dans la table {table_name}: {df[key_cols].to_dict(orient='records')}.")
             else:
-                logger.critical(f"Aucune colonne clé primaire trouvée pour la déduplication dans la table {table_name}.")
+                self.engine_logger.critical(f"Aucune colonne clé primaire trouvée pour la déduplication dans la table {table_name}.")
         if df.empty:
-            logger.info(f"Aucune nouvelle donnée à insérer dans la table {table_name}.")
+            self.engine_logger.info(f"Aucune nouvelle donnée à insérer dans la table {table_name}.")
             return
         else:
-            logger.info(f"Nombre de lignes à insérer dans la table {table_name}: {len(df)} lignes.")
-            logger.info(f"Colonnes du DataFrame à insérer dans la table {table_name}: {df.columns.tolist()}.")
+            self.engine_logger.info(f"Nombre de lignes à insérer dans la table {table_name}: {len(df)} lignes.")
+            self.engine_logger.info(f"Colonnes du DataFrame à insérer dans la table {table_name}: {df.columns.tolist()}.")
 
         # ------- Envoi des données
         try:
             df.to_sql(table_name, con=self.engine, if_exists='append', index=False)
-            logger.info(f"Données envoyées avec succès à la table {table_name}.")
+            self.engine_logger.info(f"Données envoyées avec succès à la table {table_name}.")
         except Exception as e:
-            logger.critical(f"Erreur lors de l'envoi des données à la table {table_name}: {e}")
+            self.engine_logger.critical(f"Erreur lors de l'envoi des données à la table {table_name}: {e}")
             raise
 
     @decorator_logger
@@ -183,7 +182,6 @@ class DataEnedisAdemeLoader(FileStorageConnexion):
         Envoie les données dans la bdd
         Ordre upload, car les tables sont liées entre elles par des clés étrangères.
         """
-        logger = get_run_logger()
         ## Ordre 
         self.save_one_table(
             df=self.df_tests_statistiques_dpe.drop_duplicates(subset=self.bdd_pk_mapping.get("tests_statistiques_dpe", []), keep='first'), 
@@ -209,4 +207,4 @@ class DataEnedisAdemeLoader(FileStorageConnexion):
             df=self.df_logements.drop_duplicates(subset=self.bdd_pk_mapping.get("logements", []), keep='first'), 
             table_name="logements"
         )
-        logger.info("Toutes les tables ont été envoyées avec succès à la base de données.")
+        self.engine_logger.info("Toutes les tables ont été envoyées avec succès à la base de données.")

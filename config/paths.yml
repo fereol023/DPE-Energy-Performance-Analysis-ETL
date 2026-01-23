@@ -1,4 +1,4 @@
-PATH_LOG_DIR : "storage/etl/logs/"
+# PATH_LOG_DIR : "storage/etl/logs/"
 PATH_ARCHIVE_DIR : "storage/etl/data/archive/"
 PATH_DATA_BRONZE : "storage/etl/data/1_bronze/"
 PATH_DATA_SILVER : "storage/etl/data/2_silver/"

@@ -1,5 +1,6 @@
 import re
 import os
+import time
 import json
 import yaml
 import pickle
@@ -121,22 +122,34 @@ def get_env_var(var_name, default_value=None, compulsory=False, cast_to_type=Non
     except ValueError as e:
         raise ValueError(f"Cannot cast environment variable {var_name} to {cast_to_type}: {e}")
 
-def set_config_as_env_var(dirpath=None):
-    """
-    Provides an unified way to set environment 
-    variables from a config directory including 
-    json, yaml and .env files.
-    TODO: add .env files support
-    """
-    if os.getenv('ENV') == None:
-        config = {}
-        for f in os.listdir(dirpath):
-            if f.endswith('.yaml'):
-                config.update(load_yaml_config(os.path.join(dirpath, f)))
-            if f.endswith('.json'):
-                config.update(load_json_config(os.path.join(dirpath, f)))
-        appname, env = config.get('app-name'), config.get('ENV')
-        assert env in ['LOCAL', 'NOLOCAL'], f"Config error : ENV ({env}) is not valid. Choose between ['LOCAL', 'NOLOCAL']"
-        logging.info(f"Application {appname} is running on env {env}")
-        for key, value in config.items():
-            os.environ[key] = str(value)
+def set_config_as_env_var(dirpath='config/', filename=None, debug=False, bypass_env=False):
+    if (os.getenv('ENV') == None) or (bypass_env): # si vrai les variables d'env sont probablement definies déja (mode nolocal)
+        try:
+            if debug: 
+                logging.warning(f"Loading envs var from folder : {dirpath}")
+            config = {}
+            if filename is None:
+                for filename in os.listdir(dirpath):
+                    if filename.endswith('.yml'):
+                        config.update(load_yaml_config(os.path.join(dirpath, filename)))
+                    if filename.endswith('.json'):
+                        config.update(load_json_config(os.path.join(dirpath, filename)))
+            else:
+                if filename.endswith('.yml'):
+                    config.update(load_yaml_config(os.path.join(dirpath, filename)))
+                if filename.endswith('.json'):
+                    config.update(load_json_config(os.path.join(dirpath, filename)))
+            appname, env = config.get('ETL-ENGINE-NAME'), config.get('ENV')
+            if not bypass_env: 
+                assert env in ['LOCAL', 'NOLOCAL'], f"Config error : ENV ({env}) is not valid. Choose between ['LOCAL', 'NOLOCAL']"
+            logging.info(f"Application {appname} is running on env {env}")
+            for key, value in config.items():
+                if debug:
+                    print(f"Setting config : {key} = {value}", end="\r", flush=True) # flush desactive le buffering du terminal et force affichage immediat
+                    time.sleep(.1)
+                os.environ[key] = str(value)
+        except Exception as e:
+            print(f"Exception while setting config : {e}")
+    else:
+        print(f"Config already set from ENV var : {os.getenv('ENV')} - processing {dirpath}/{filename} bypassed.")
+

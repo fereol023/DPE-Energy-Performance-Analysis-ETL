@@ -9,6 +9,7 @@ from functools import wraps
 from concurrent.futures import ThreadPoolExecutor
 
 try:
+    from ..scripts.envs_helper import Envs
     from ..utils.fonctions import get_env_var, get_today_date
 except ImportError:
     import sys
@@ -16,14 +17,15 @@ except ImportError:
     current_dir = Path(__file__).resolve().parent
     parent_dir = current_dir.parent
     sys.path.append(str(parent_dir))
+    from scripts.envs_helper import Envs
     from utils.fonctions import get_env_var, get_today_date
 
 # configuration for Elasticsearch
 # ELASTICSEARCH_HOST = get_env_var('ELASTICSEARCH_HOST', compulsory=True)
 # ELASTICSEARCH_PORT = get_env_var('ELASTICSEARCH_PORT', compulsory=True, cast_to_type=int)
 # ELASTICSEARCH_INDEX = get_env_var('ELASTICSEARCH_INDEX', compulsory=True)
-LOGGER_APP_NAME = get_env_var('ETL_LOGGER_APP_NAME', default_value='dpe_ETL_engine_logger', compulsory=True)
-BATCH_CORRELATION_ID = get_env_var('BATCH_CORRELATION_ID', default_value="000000000", compulsory=True)
+# LOGGER_APP_NAME = get_env_var('ETL_LOGGER_APP_NAME', default_value='dpe_ETL_engine_logger', compulsory=True)
+# BATCH_CORRELATION_ID = get_env_var('BATCH_CORRELATION_ID', default_value="000000000", compulsory=True)
 
 
 def get_custom_logger_dict():
@@ -114,46 +116,43 @@ def get_custom_logger_dict():
 
 
 # config logger
-def get_async_elk_logger(app_name=None) ->logging.Logger:
+def get_async_logger(app_name="") -> logging.Logger:
     """
-    Configure the logger to send logs to elk server.
+    Configure the logger.
     """
     import queue
-
-    _logger = logging.getLogger(name=app_name if app_name else LOGGER_APP_NAME)
+    app_name = app_name if app_name != "" else get_env_var('ETL_LOGGER_APP_NAME', default_value='dpe_ETL_engine_logger', compulsory=True)
+    _logger = logging.getLogger(name=app_name)
     _logger.setLevel(logging.INFO)
-    
-    if get_env_var('ENV', compulsory=True) == 'LOCAL':
-        log_dir = None # get_env_var("PATH_LOG_DIR", default_value=None, compulsory=False)
-        # if log_dir is not None:
-        #     os.makedirs(log_dir, exist_ok=True)
-        #     log_file = os.path.join(log_dir, f"run_{get_today_date()}.log")
-        #     _backup_handler = logging.FileHandler(log_file)
-        # else:
+    _env = get_env_var('ENV', compulsory=True)
+
+    if _env == Envs.PROD:
+        #_backup_handler = AsyncElasticSearchHandler(index=ELASTICSEARCH_INDEX) # TODO: remove elastic handler
         _backup_handler = logging.StreamHandler(sys.stdout)
     else:
-        #_backup_handler = AsyncElasticSearchHandler(index=ELASTICSEARCH_INDEX)
-        _backup_handler = logging.StreamHandler(sys.stdout)
+        log_dir = get_env_var("PATH_LOG_DIR", default_value=None, compulsory=False)
+        if log_dir is not None:
+            os.makedirs(log_dir, exist_ok=True)
+            b, d = get_env_var('BATCH_CORRELATION_ID', compulsory=True), get_today_date()
+            log_file = os.path.join(log_dir, f"run_{b}_{d}.log")
+            _backup_handler = logging.FileHandler(log_file)
+        else:
+            _backup_handler = logging.StreamHandler(sys.stdout)
     
-    _formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # add the name of the env in the formatter 
+    _formatter = logging.Formatter(f'%(asctime)s - %(name)s - %(levelname)s - %(message)s - ENV:' + _env) 
     _backup_handler.setFormatter(_formatter)
-
-    # create a queue for log records
-    _log_queue = queue.Queue(-1) # infinite size for queue
+    _log_queue = queue.Queue(-1) # create a queue for log records with infinite size
     _queue_handler = logging.handlers.QueueHandler(_log_queue)
     _logger.addHandler(_queue_handler)
-
-    # Start a listener with the elastic handler
-    listener = logging.handlers.QueueListener(_log_queue, _backup_handler)
+    listener = logging.handlers.QueueListener(_log_queue, _backup_handler) # and start a listener with the handler
     listener.start()
-
-    _logger.propagate = False  # Prevents the log messages from being propagated to the root logger
-    # _logger.info(f"Logger initialized for {LOGGER_APP_NAME} with Elasticsearch")
+    _logger.propagate = False  # to prevent log messages from being propagated to the root logger
     return _logger
 
 
 # --- logger pour les fonctions 
-def decorator_logger(func, logger=get_async_elk_logger()):
+def decorator_logger(func, logger=get_async_logger()):
     @wraps(func)
     def wrapper(*args, **kwargs):
         s = datetime.datetime.now()
@@ -168,8 +167,8 @@ def decorator_logger(func, logger=get_async_elk_logger()):
             log_entry["details"]["message"] = str(e)
         finally:
             log_entry["duration_ms"] = round((datetime.datetime.now() - s).total_seconds() * 1_000, 3)
-            log_entry["correlation_id"] = BATCH_CORRELATION_ID
-            log_entry["app_name"] = LOGGER_APP_NAME
+            log_entry["correlation_id"] = get_env_var('BATCH_CORRELATION_ID', compulsory=True)
+            log_entry["app_name"] = get_env_var('ETL_LOGGER_APP_NAME', default_value='dpe_ETL_engine_logger', compulsory=True)
             if log_entry["status"] == "fail":
                 log_entry["severity"] = "CRITICAL"
                 logger.critical(log_entry)
@@ -181,7 +180,7 @@ def decorator_logger(func, logger=get_async_elk_logger()):
                 return result
     return wrapper
 
-logger = get_async_elk_logger()
+async_logger = get_async_logger()
 
 # # Example usage
 # logger.info("This is an info message.")
