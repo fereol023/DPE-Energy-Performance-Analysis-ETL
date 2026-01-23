@@ -9,6 +9,7 @@ from functools import wraps
 from concurrent.futures import ThreadPoolExecutor
 
 try:
+    from ..scripts.envs_helper import Envs
     from ..utils.fonctions import get_env_var, get_today_date
 except ImportError:
     import sys
@@ -16,6 +17,7 @@ except ImportError:
     current_dir = Path(__file__).resolve().parent
     parent_dir = current_dir.parent
     sys.path.append(str(parent_dir))
+    from scripts.envs_helper import Envs
     from utils.fonctions import get_env_var, get_today_date
 
 # configuration for Elasticsearch
@@ -122,8 +124,12 @@ def get_async_logger(app_name="") -> logging.Logger:
     app_name = app_name if app_name != "" else get_env_var('ETL_LOGGER_APP_NAME', default_value='dpe_ETL_engine_logger', compulsory=True)
     _logger = logging.getLogger(name=app_name)
     _logger.setLevel(logging.INFO)
-    
-    if get_env_var('ENV', compulsory=True) == 'LOCAL':
+    _env = get_env_var('ENV', compulsory=True)
+
+    if _env == Envs.PROD:
+        #_backup_handler = AsyncElasticSearchHandler(index=ELASTICSEARCH_INDEX) # TODO: remove elastic handler
+        _backup_handler = logging.StreamHandler(sys.stdout)
+    else:
         log_dir = get_env_var("PATH_LOG_DIR", default_value=None, compulsory=False)
         if log_dir is not None:
             os.makedirs(log_dir, exist_ok=True)
@@ -132,11 +138,9 @@ def get_async_logger(app_name="") -> logging.Logger:
             _backup_handler = logging.FileHandler(log_file)
         else:
             _backup_handler = logging.StreamHandler(sys.stdout)
-    else:
-        #_backup_handler = AsyncElasticSearchHandler(index=ELASTICSEARCH_INDEX) # TODO: remove elastic handler
-        _backup_handler = logging.StreamHandler(sys.stdout)
     
-    _formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # add the name of the env in the formatter 
+    _formatter = logging.Formatter(f'%(asctime)s - %(name)s - %(levelname)s - %(message)s - ENV:' + _env) 
     _backup_handler.setFormatter(_formatter)
     _log_queue = queue.Queue(-1) # create a queue for log records with infinite size
     _queue_handler = logging.handlers.QueueHandler(_log_queue)

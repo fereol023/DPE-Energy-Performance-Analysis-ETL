@@ -49,12 +49,12 @@ class FileStorageConnexion(Paths):
         except ImportError:
             return async_logger
         else:
-            return async_logger if get_env_var("ENV", compulsory=True)==Envs.ISOLATED else get_run_logger()
+            return get_run_logger() if get_env_var("ENV", compulsory=True)==Envs.PROD else async_logger
 
 
     def __set_client(self):
         try:
-            if self.env == Envs.LOCAL:
+            if self.env in [Envs.LOCAL, Envs.ISOLATED]:
                 self.client = None
             else:
                 # client minio is just used to init the bucket
@@ -86,7 +86,7 @@ class FileStorageConnexion(Paths):
         def purge_s3_archive_dir():
             self.client.remove_objects(self.BUCKET_NAME, prefix=self.PATH_ARCHIVE_DIR)    
  
-        if self.env == Envs.LOCAL:
+        if self.env in [Envs.LOCAL, Envs.ISOLATED]:
             purge_local_archive_dir()
         else:
             purge_s3_archive_dir()
@@ -133,7 +133,7 @@ class FileStorageConnexion(Paths):
             )
             self.engine_logger.info(f"Uploaded {fname} to bucket {self.BUCKET_NAME}.")
 
-        if self.env==Envs.LOCAL:
+        if self.env in [Envs.LOCAL, Envs.ISOLATED]:
             save_parquet_file_to_local()
         else:
             save_parquet_file_to_s3()
@@ -161,7 +161,7 @@ class FileStorageConnexion(Paths):
                 lines=True
             )
          
-        if self.env==Envs.LOCAL:
+        if self.env in [Envs.LOCAL, Envs.ISOLATED]:
             return load_parquet_file_from_local()
         else:
             return load_parquet_file_from_s3()

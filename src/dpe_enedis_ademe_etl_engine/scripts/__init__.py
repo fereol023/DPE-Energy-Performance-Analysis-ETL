@@ -3,7 +3,6 @@ import json
 import requests
 import pandas as pd
 from io import BytesIO
-from enum import enumerate
 
 # use s3fs with boto3 client later
 from minio import Minio 
@@ -15,6 +14,7 @@ try:
         get_env_var,
         get_today_date, 
     )
+    from ..scripts.envs_helper import Envs
 except ImportError:
     import sys
     from pathlib import Path
@@ -26,7 +26,7 @@ except ImportError:
         get_env_var,
         get_today_date, 
     )
-
+    from scripts.envs_helper import Envs
 
 class Paths:
     """
@@ -42,8 +42,7 @@ class Paths:
         self.PATH_DATA_GOLD = get_env_var('PATH_DATA_GOLD', compulsory=True)
         async_logger.info(f"Environment: {self.env}")
 
-
-class Envs(enumerate):
-    LOCAL = "LOCAL"
-    PROD = "NOLOCAL"
-    ISOLATED = "ISOLATED"
+__all__ = [
+    "Paths",
+    "Envs"
+    ]

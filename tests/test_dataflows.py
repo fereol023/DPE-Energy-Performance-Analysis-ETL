@@ -1,3 +1,4 @@
+import os
 import copy
 import httpx
 import pandas as pd
@@ -52,7 +53,9 @@ def test_fetch_api_ban():
 def test_run_extract(
         extraction_pip, 
     ):
-    extraction_pip.extract(
+    os.environ['PREFECT_API_URL'] = ''
+    extraction_pip.extract.fn(
+        extraction_pip,
         from_input=False, 
         input_csv_path="",
         code_departement=75, 
@@ -68,7 +71,9 @@ def test_run_transform(
         test_schemas_folder
     ):
     # utilse en entrée l'exemple extract output (cf. l'init dans conftest)
-    transformation_pip.run(
+    os.environ['PREFECT_API_URL'] = ''
+    transformation_pip.run.fn(
+        transformation_pip,
         types_schema_fpath=os.path.join(test_schemas_folder, 'schema_silver_data.json')
     )
     assert not transformation_pip.df_adresses.empty

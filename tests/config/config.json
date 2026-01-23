@@ -1,9 +1,6 @@
 {
-    "ENV": "LOCAL",
+    "ENV": "ISOLATED",
     "APP_NAME": "DPE-ETL",
-    "APP_VERSION": "0.0.1",
-    "APP_DESCRIPTION": "backend for DPE Energy Performance Analysis",
-    "LOGGER_APP_NAME": "ETL-Logger",
 
     "POSTGRES_HOST": "host",
     "POSTGRES_PORT": "5432",

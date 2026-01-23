@@ -100,7 +100,8 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
         if self.debug: self.debugger = {} 
         # --- fonctions urls ---
         # generer une url pour requeter l'api enedis avec restriction sur l'année et le nombre de lignes
-        self.get_url_enedis_year_rows = lambda annee, rows: f"https://data.enedis.fr/api/explore/v2.1/catalog/datasets/consommation-annuelle-residentielle-par-adresse/records?where=annee%20%3D%20date'{annee}'&limit={rows}"
+        # TODO: update 202510 # self.get_url_enedis_year_rows = lambda annee, rows: f"https://data.enedis.fr/api/explore/v2.1/catalog/datasets/consommation-annuelle-residentielle-par-adresse/records?where=annee%20%3D%20date'{annee}'&limit={rows}"
+        self.get_url_enedis_year_rows = lambda annee, rows: f"https://opendata.enedis.fr/data-fair/api/v1/datasets/consommation-annuelle-residentielle-par-adresse/lines?annee_eq={annee}&size={rows}"
         self.get_url_enedis=lambda annee,  code_departement, limit, offset: f"https://data.enedis.fr/api/explore/v2.1/catalog/datasets/consommation-annuelle-residentielle-par-adresse/records?where=annee%3Ddate%27{annee}%27%20and%20code_departement%3D%27{code_departement}%27&order_by=tri_des_adresses&limit={limit}&offset={offset}"
         # generer une url pour requeter l'api de la ban à partir d'une adresse
         self.get_url_ademe_filter_on_ban = lambda key: f"https://data.ademe.fr/data-fair/api/v1/datasets/dpe-v2-logements-existants/lines?size=1000&format=json&qs=Identifiant__BAN%3A{key}"
@@ -135,7 +136,7 @@ class DataEnedisAdemeExtractor(FileStorageConnexion):
                 )
         
         try:
-            if self.env=='LOCAL':
+            if self.env in [Envs.LOCAL, Envs.ISOLATED]:
                 load_enedis_input_from_local_csv()
             else:
                 load_enedis_input_from_s3_csv()
