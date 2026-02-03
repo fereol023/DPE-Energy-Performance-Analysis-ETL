@@ -122,7 +122,7 @@ def get_env_var(var_name, default_value=None, compulsory=False, cast_to_type=Non
     except ValueError as e:
         raise ValueError(f"Cannot cast environment variable {var_name} to {cast_to_type}: {e}")
 
-def set_config_as_env_var(dirpath='config/', filename=None, debug=False, bypass_env=False):
+def set_config_as_env_var(dirpath='config/', filename=None, debug=False, bypass_env=False, override_existing=True):
     if (os.getenv('ENV') == None) or (bypass_env): # si vrai les variables d'env sont probablement definies déja (mode nolocal)
         try:
             if debug: 
@@ -141,13 +141,22 @@ def set_config_as_env_var(dirpath='config/', filename=None, debug=False, bypass_
                     config.update(load_json_config(os.path.join(dirpath, filename)))
             appname, env = config.get('ETL-ENGINE-NAME'), config.get('ENV')
             if not bypass_env: 
-                assert env in ['LOCAL', 'NOLOCAL'], f"Config error : ENV ({env}) is not valid. Choose between ['LOCAL', 'NOLOCAL']"
+                assert env in ['LOCAL', 'NOLOCAL', 'ISOLATED'], f"Config error : ENV ({env}) is not valid. Choose between ['LOCAL', 'NOLOCAL', 'ISOLATED']"
             logging.info(f"Application {appname} is running on env {env}")
             for key, value in config.items():
-                if debug:
-                    print(f"Setting config : {key} = {value}", end="\r", flush=True) # flush desactive le buffering du terminal et force affichage immediat
-                    time.sleep(.1)
-                os.environ[key] = str(value)
+                #if debug:
+                #    print(f"Setting config : {key} = {value}", end="\r", flush=True) # flush desactive le buffering du terminal et force affichage immediat
+                #    time.sleep(.1)
+                if override_existing:
+                    if key in os.environ:
+                        os.environ[key] = str(value)
+                        if debug: print(f"Overriding existing env. var : {key} = {os.environ[key]} --> {value}")
+                else:
+                    if key in os.environ:
+                        if debug: 
+                            print(f"Env. var {key} already set to {os.environ[key]}, not overriding with {value}")
+                    else:
+                        os.environ[key] = str(value)
         except Exception as e:
             print(f"Exception while setting config : {e}")
     else:

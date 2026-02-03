@@ -502,7 +502,7 @@ wheels = [
 
 [[package]]
 name = "dpe-enedis-ademe-etl-engine"
-version = "2.2.10"
+version = "2.3.1"
 source = { virtual = "." }
 dependencies = [
     { name = "boto3" },
