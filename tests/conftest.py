@@ -39,9 +39,14 @@ def example_extract_output(test_data_folder):
 
 @pytest.fixture(scope="session")
 def extraction_pip(test_config_folder, test_data_folder):
+    print(f"data folder : {test_data_folder}")
+    print(f"config folder: {test_config_folder}")
     set_config(test_config_folder, test_data_folder)
+    print(f"Enedis folder : {os.environ.get('PATH_FILE_INPUT_ENEDIS_CSV')}")
     from src.dpe_enedis_ademe_etl_engine.pipelines import DataEnedisAdemeExtractor
-    return DataEnedisAdemeExtractor(debug=True)
+    obj = DataEnedisAdemeExtractor(debug=True)
+    print("enedis path in obj : ", obj.PATH_FILE_INPUT_ENEDIS_CSV)
+    return obj
 
 @pytest.fixture(scope="session")
 def transformation_pip(test_config_folder, test_data_folder, example_extract_output, test_schemas_folder):

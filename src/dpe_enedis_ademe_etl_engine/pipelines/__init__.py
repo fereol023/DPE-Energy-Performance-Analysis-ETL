@@ -4,10 +4,11 @@ import pathlib
 from ..utils.fonctions import set_config_as_env_var as set_config
 
 set_config(
-    dirpath=pathlib.Path(__file__).parent.parent.parent / "config",
+    dirpath=pathlib.Path(__file__).parent.parent / "config",
     filename="paths.yml",
     debug=True,
     bypass_env=True,
+    override_existing=False, # this avoid to override paths if they are already set for exemple (spe. useful in tests)
 )
 
 AUTOM_BATCH_CORRELATION_ID = str(uuid.uuid4()).replace('-', '')

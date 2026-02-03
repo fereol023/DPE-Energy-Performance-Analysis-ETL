@@ -1,0 +1,100 @@
+{
+    "schema-adresses": {
+        "cols": {
+            "id_ban": {"type": "string", "default": "N/C"},
+            "full_adress_ban": {"type": "string", "default": "N/C"},
+            "label_ban": {"type": "string", "default": "N/C"},
+            "complement_d_adresse_batiment_ademe": {"type": "string", "default": "N/C"},
+            "complement_d_adresse_logement_ademe": {"type": "string", "default": "N/C"}
+        },
+        "required": []
+    },
+    "schema-logements": {
+        "cols": {
+            "annee_construction_ademe": {"type": "float64", "default": -1}, 
+            "apport_interne_saison_chauffe_ademe": {"type": "float64", "default": -1}, 
+            "apport_solaire_saison_chauffe_ademe": {"type": "float64", "default": -1}, 
+            "besoin_ecs_ademe": {"type": "float64", "default": -1}, 
+            "classe_inertie_batiment_ademe": {"type": "string", "default": "N/C"}, 
+            "conso_5_usages_par_m2_ef_ademe": {"type": "float64", "default": -1}, 
+            "conso_5_usages_par_m2_ep_ademe": {"type": "float64", "default": -1}, 
+            "conso_chauffage_generateur_n1_installation_n1_ademe": {"type": "float64", "default": -1}, 
+            "conso_ef_generateur_n1_ecs_n1_ademe": {"type": "float64", "default": -1}, 
+            "cout_ecs_energie_n1_ademe": {"type": "float64", "default": -1}, 
+            "cout_total_5_usages_energie_n1_ademe": {"type": "float64", "default": -1}, 
+            "cout_total_5_usages_energie_n2_ademe": {"type": "float64", "default": -1}, 
+            "deperditions_baies_vitrees_ademe": {"type": "float64", "default": -1}, 
+            "deperditions_murs_ademe": {"type": "float64", "default": -1}, 
+            "deperditions_ponts_thermiques_ademe": {"type": "float64", "default": -1}, 
+            "deperditions_portes_ademe": {"type": "float64", "default": -1}, 
+            "emission_ges_5_usages_par_m2_ademe": {"type": "float64", "default": -1}, 
+            "emission_ges_auxiliaires_ademe": {"type": "float64", "default": -1}, 
+            "emission_ges_chauffage_ademe": {"type": "float64", "default": -1}, 
+            "emission_ges_ecs_ademe": {"type": "float64", "default": -1}, 
+            "emission_ges_ecs_energie_n1_ademe": {"type": "float64", "default": -1}, 
+            "etiquette_dpe_ademe": {"type": "string", "default": "N/C"}, 
+            "etiquette_ges_ademe": {"type": "string", "default": "N/C"}, 
+            "nombre_de_logements_enedis": {"type": "int64", "default": -1}, 
+            "numero_de_voie_enedis": {"type": "float64", "default": -1}, 
+            "periode_construction_ademe": {"type": "string", "default": "N/C"}, 
+            "qualite_isolation_menuiseries_ademe": {"type": "string", "default": "N/C"}, 
+            "surface_habitable_desservie_par_installation_ecs_n1_ademe": {"type": "float64", "default": -1}, 
+            "surface_habitable_logement_ademe": {"type": "float64", "default": -1}, 
+            "type_energie_generateur_n1_ecs_n1_ademe": {"type": "string", "default": "N/C"}, 
+            "type_energie_generateur_n1_installation_n1_ademe": {"type": "string", "default": "N/C"}, 
+            "type_energie_n1_ademe": {"type": "string", "default": "N/C"}, 
+            "type_energie_n2_ademe": {"type": "string", "default": "N/C"}, 
+            "type_energie_principale_chauffage_ademe": {"type": "string", "default": "N/C"}, 
+            "type_energie_principale_ecs_ademe": {"type": "string", "default": "N/C"}, 
+            "type_installation_ecs_ademe": {"type": "string", "default": "N/C"}, 
+            "ubat_w_par_m2_k_ademe": {"type": "float64", "default": -1}, 
+            "usage_generateur_n1_ecs_n1_ademe": {"type": "string", "default": "N/C"}, 
+            "volume_stockage_generateur_n1_ecs_n1_ademe": {"type": "float64", "default": -1}, 
+            "batch_id": {"type": "string", "default": "N/C"}, 
+            "_id_ademe": {"type": "string", "default": "N/C"}, 
+            "id_ban": {"type": "string", "default": "N/C"}, 
+            "code_postal_ban_ademe": {"type": "string", "default": "N/C"},
+            "absolute_diff_conso_fin_act": {"type": "float64", "default": -1}, 
+            "absolute_diff_conso_prim_fin": {"type": "float64", "default": -1}, 
+            "conso_kwh_m2": {"type": "float64", "default": -1}, 
+            "consumption_difference": {"type": "float64", "default": -1}
+        }, 
+        "required": []
+    },
+    "schema-villes": {
+        "cols": {
+            "code_postal_ban_ademe": {"type": "string", "default": "N/C"},
+            "city_ban": {"type": "string", "default": "N/C"},
+            "code_departement_enedis": {"type": "string", "default": "N/C"}
+        },
+        "required": []
+    },
+    "schema-donnees_climatiques": {
+        "cols":{
+            "id_ban": {"type": "string", "default": "N/C"},
+            "zone_climatique_ademe": {"type": "string", "default": "N/C"}
+        }
+    },
+    "schema-donnees_geocodage": {
+        "cols": {
+            "id_ban": {"type": "string", "default": "N/C"},
+            "lon_ban": {"type": "float", "default": 0.0},
+            "lat_ban": {"type": "float", "default": 0.0},
+            "score_ban_ademe": {"type": "float", "default": 0.0},
+            "statut_geocodage_ademe": {"type": "string", "default": "N/C"}
+        },
+        "required": []
+    },
+    "schema-tests_statistiques_dpe": {
+        "cols": {
+            "batch_id": {"type": "string", "default": "N/C"},
+            "etiquette_dpe_ademe": {"type": "string", "default": "-"},
+            "sample_size": {"type": "float", "default": 0.0},
+            "paired_t_test_t_statistic": {"type": "float", "default": 0.0},
+            "paired_t_test_p_value": {"type": "float", "default": 0.0},
+            "wilcoxon_statistic": {"type": "float", "default": 0.0},
+            "wilcoxon_p_value": {"type": "float", "default": 0.0}
+        },
+        "required": []
+    }
+}
